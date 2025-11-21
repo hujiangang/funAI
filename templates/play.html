@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>正在运行 - {{ game.title }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; }
+        /* 隐藏滚动条 */
+        ::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body>
+
+    <!-- 返回按钮 -->
+    <a href="/" class="fixed top-4 left-4 z-50 flex items-center gap-2 bg-black/50 backdrop-blur hover:bg-black/80 text-white px-4 py-2 rounded-full text-sm font-bold transition border border-white/10 shadow-lg group">
+        <span class="group-hover:-translate-x-1 transition-transform">←</span> 返回
+    </a>
+
+    <!-- 右上角信息浮窗 -->
+    <div class="fixed top-4 right-4 z-50 text-right pointer-events-none">
+        <div class="bg-black/60 backdrop-blur text-white p-4 rounded-xl border border-white/10 pointer-events-auto inline-block max-w-xs shadow-xl">
+            <h2 class="font-bold text-base text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-blue-500">
+                {{ game.title }}
+            </h2>
+            <div class="text-xs text-gray-400 mt-1 flex justify-end gap-2 items-center">
+                <span>👤 {{ game.author }}</span>
+                <span class="bg-gray-700 px-1.5 rounded text-[10px]">🤖 {{ game.ai_model }}</span>
+            </div>
+            
+            {% if game.prompt %}
+            <details class="mt-3 text-left border-t border-gray-700 pt-2">
+                <summary class="cursor-pointer text-xs text-gray-400 hover:text-white transition list-none flex items-center gap-1 select-none">
+                    <span>📜</span> 查看提示词
+                </summary>
+                <div class="mt-2 p-2 bg-black/40 rounded text-[10px] text-gray-300 font-mono max-h-40 overflow-y-auto border border-white/5 shadow-inner whitespace-pre-wrap">
+{{ game.prompt }}
+                </div>
+            </details>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 游戏容器 -->
+    <!-- 
+        修复核心：
+        不要用 srcdoc="{{ game.html_code }}" 
+        改成 src="/content/{{ game.id }}"
+        这样无论代码里有多少引号，都不会导致页面崩坏
+    -->
+    <iframe 
+        src="/content/{{ game.id }}" 
+        class="absolute inset-0 w-full h-full border-none bg-black"
+        allowfullscreen
+        sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms"
+    ></iframe>
+
+</body>
+</html>

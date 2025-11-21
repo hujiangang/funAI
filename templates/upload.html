@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>上传新游戏</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen p-6">
+    
+    <div class="max-w-3xl mx-auto">
+        <!-- 顶部导航 -->
+        <div class="flex items-center justify-between mb-8">
+            <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-blue-500">
+                📤 提交 AI 游戏
+            </h1>
+            <a href="/" class="text-gray-400 hover:text-white transition">取消并返回</a>
+        </div>
+
+        <!-- 表单区域 -->
+        <div class="bg-gray-800 rounded-xl p-8 shadow-2xl border border-gray-700">
+            <form action="/upload" method="post" class="space-y-6">
+                
+                <!-- 第一行：标题和作者 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-1">游戏名称</label>
+                        <input type="text" name="title" required placeholder="例如：超级贪吃蛇"
+                               class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 focus:ring-2 focus:ring-green-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-1">作者 / 贡献者</label>
+                        <input type="text" name="author" required placeholder="你的名字"
+                               class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 focus:ring-2 focus:ring-green-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <!-- 第二行：AI 模型和简介 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-1">使用的 AI 模型</label>
+                        <select name="ai_model" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 focus:ring-2 focus:ring-green-500 focus:outline-none">
+                            <option value="DeepSeek-V3">DeepSeek-V3</option>
+                            <option value="GPT-4o">GPT-4o</option>
+                            <option value="Claude 3.5 Sonnet">Claude 3.5 Sonnet</option>
+                            <option value="Gemini Pro">Gemini Pro</option>
+                            <option value="其他">其他</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-1">一句话简介</label>
+                        <input type="text" name="description" placeholder="玩法简单介绍..."
+                               class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 focus:ring-2 focus:ring-green-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <!-- 提示词 (Prompt) -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-1">使用的提示词 (Prompt)</label>
+                    <textarea name="prompt" rows="3" placeholder="分享你是怎么让 AI 生成这个游戏的..."
+                              class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 focus:ring-2 focus:ring-green-500 focus:outline-none text-sm"></textarea>
+                </div>
+
+                <!-- HTML 代码 -->
+                <div>
+                    <label class="block text-sm font-medium text-green-400 mb-1">HTML 代码 (完整粘贴到这里)</label>
+                    <textarea name="html_code" rows="10" required placeholder="<!DOCTYPE html>..."
+                              class="w-full bg-black border border-gray-600 rounded-lg p-4 font-mono text-xs text-green-400 focus:ring-2 focus:ring-green-500 focus:outline-none"></textarea>
+                    <p class="text-xs text-gray-500 mt-2">* 请确保代码包含 &lt;html&gt; 和 &lt;script&gt; 标签</p>
+                </div>
+
+                <!-- 提交按钮 -->
+                <button type="submit" class="w-full bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white font-bold py-4 rounded-lg transition transform hover:scale-[1.01] shadow-lg">
+                    🚀 立即发布并试玩
+                </button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

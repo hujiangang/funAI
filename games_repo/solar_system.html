@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Solar System Demo</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        canvas { display: block; }
+        #ui {
+            position: absolute; top: 20px; left: 20px;
+            color: rgba(255, 255, 255, 0.8);
+            pointer-events: none; user-select: none;
+        }
+        h1 { margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 2px; }
+        p { margin: 5px 0 0; font-size: 14px; color: #aaa; }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <h1>Solar Gravity</h1>
+        <p>Click to launch asteroids • Scroll to zoom</p>
+    </div>
+    <canvas id="c"></canvas>
+
+    <script>
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        
+        let width, height, zoom = 1.0;
+        
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // 星球配置
+        const planets = [
+            { r: 40, d: 0, speed: 0, color: '#FDB813', glow: 50, name: 'Sun' },
+            { r: 6, d: 70, speed: 0.025, color: '#A5A5A5', glow: 0, name: 'Mercury' },
+            { r: 10, d: 110, speed: 0.015, color: '#E3BB76', glow: 0, name: 'Venus' },
+            { r: 12, d: 160, speed: 0.012, color: '#4F86F7', glow: 5, name: 'Earth' },
+            { r: 8, d: 210, speed: 0.009, color: '#FF6B6B', glow: 0, name: 'Mars' },
+            { r: 25, d: 300, speed: 0.005, color: '#D4A373', glow: 0, name: 'Jupiter' },
+            { r: 22, d: 400, speed: 0.003, color: '#F4E4BA', glow: 0, name: 'Saturn' }
+        ];
+        
+        let asteroids = [];
+        let time = 0;
+
+        // 交互逻辑
+        window.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left - width/2) / zoom;
+            const y = (e.clientY - rect.top - height/2) / zoom;
+            asteroids.push({
+                x: x, y: y,
+                vx: (Math.random() - 0.5) * 2,
+                vy: (Math.random() - 0.5) * 2,
+                size: Math.random() * 2 + 1,
+                color: '#FFF'
+            });
+        });
+
+        window.addEventListener('wheel', (e) => {
+            zoom += e.deltaY * -0.001;
+            zoom = Math.min(Math.max(0.2, zoom), 3);
+        });
+
+        function draw() {
+            // 拖尾背景
+            ctx.fillStyle = 'rgba(10, 10, 16, 0.2)';
+            ctx.fillRect(0, 0, width, height);
+            
+            ctx.save();
+            ctx.translate(width / 2, height / 2);
+            ctx.scale(zoom, zoom);
+
+            // 绘制行星
+            planets.forEach(p => {
+                const angle = time * p.speed;
+                const x = Math.cos(angle) * p.d;
+                const y = Math.sin(angle) * p.d;
+                
+                // 轨道线
+                if(p.d > 0) {
+                    ctx.beginPath();
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+                    ctx.arc(0, 0, p.d, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+
+                // 星球
+                ctx.beginPath();
+                ctx.fillStyle = p.color;
+                ctx.shadowBlur = p.glow;
+                ctx.shadowColor = p.color;
+                ctx.arc(x, y, p.r, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            });
+
+            // 绘制小行星
+            asteroids.forEach((a, index) => {
+                // 简单的引力模拟 (向中心拉)
+                const dist = Math.sqrt(a.x*a.x + a.y*a.y);
+                if(dist > 10) {
+                    const force = 500 / (dist * dist);
+                    const angle = Math.atan2(-a.y, -a.x);
+                    a.vx += Math.cos(angle) * force;
+                    a.vy += Math.sin(angle) * force;
+                }
+                
+                a.x += a.vx;
+                a.y += a.vy;
+
+                ctx.beginPath();
+                ctx.fillStyle = a.color;
+                ctx.arc(a.x, a.y, a.size, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 移除飞太远的
+                if(dist > 2000) asteroids.splice(index, 1);
+            });
+
+            ctx.restore();
+            time += 1;
+            requestAnimationFrame(draw);
+        }
+        draw();
+    </script>
+</body>
+</html>
