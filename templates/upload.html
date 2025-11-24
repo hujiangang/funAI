@@ -38,14 +38,20 @@
                 <!-- 第二行：AI 模型和简介 -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <label class="block text-sm font-medium text-gray-400 mb-1">使用的 AI 模型</label>
-                        <select name="ai_model" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 focus:ring-2 focus:ring-green-500 focus:outline-none">
+                        <label class="block text-sm font-medium text-gray-400 mb-1">选择或填写 AI 模型</label>
+                        <select name="ai_model" id="ai_model_select" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 focus:ring-2 focus:ring-green-500 focus:outline-none">
                             <option value="DeepSeek-V3">DeepSeek-V3</option>
                             <option value="GPT-4o">GPT-4o</option>
                             <option value="Claude 3.5 Sonnet">Claude 3.5 Sonnet</option>
                             <option value="Gemini Pro">Gemini Pro</option>
                             <option value="其他">其他</option>
                         </select>
+                        <!-- 手动填写 AI 模型名称的输入框，默认隐藏 -->
+                        <div id="other_ai_model_container" class="mt-4 hidden">
+                            <label class="block text-sm font-medium text-gray-400 mb-1">请填写具体的 AI 模型名称</label>
+                            <input type="text" name="custom_ai_model" id="custom_ai_model_input" placeholder="例如：Bard, Llama 3, 自定义模型"
+                                   class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 focus:ring-2 focus:ring-green-500 focus:outline-none">
+                        </div>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-400 mb-1">一句话简介</label>
@@ -76,5 +82,28 @@
             </form>
         </div>
     </div>
+
+    <script>
+        const aiModelSelect = document.getElementById('ai_model_select');
+        const otherAiModelContainer = document.getElementById('other_ai_model_container');
+        const customAiModelInput = document.getElementById('custom_ai_model_input');
+
+        function toggleOtherAiModelInput() {
+            if (aiModelSelect.value === '其他') {
+                otherAiModelContainer.classList.remove('hidden');
+                customAiModelInput.setAttribute('required', 'required');
+            } else {
+                otherAiModelContainer.classList.add('hidden');
+                customAiModelInput.removeAttribute('required');
+                customAiModelInput.value = ''; // 清空值，避免提交不必要的数据
+            }
+        }
+
+        // 页面加载时检查一次，以防用户刷新页面时“其他”已被选中
+        toggleOtherAiModelInput();
+
+        // 监听选择框的变化
+        aiModelSelect.addEventListener('change', toggleOtherAiModelInput);
+    </script>
 </body>
 </html>

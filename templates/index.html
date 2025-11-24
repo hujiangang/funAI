@@ -34,9 +34,16 @@
                 </div>
                 <div class="p-5">
                     <h3 class="text-xl font-bold mb-2 group-hover:text-purple-400 transition">{{ game.title }}</h3>
-                    <p class="text-gray-400 text-sm line-clamp-2 mb-4">{{ game.description }}</p>
-                    <div class="flex justify-between items-center text-xs text-gray-500 border-t border-gray-700 pt-3">
-                        <span>📁 {{ game.filename }}</span>
+                    <!-- 新增：作者、AI模型、星级 -->
+                    <div class="flex items-center gap-4 text-xs text-gray-400 mb-3">
+                        <span>👤 {{ game.author }}</span>
+                        <span class="bg-gray-700 px-1.5 py-0.5 rounded text-[10px]">🤖 {{ game.ai_model }}</span>
+                        <span class="text-yellow-400">{% for i in range(game.rating | int) %}⭐{% endfor %}</span>
+                    </div>
+                    <div class="flex justify-between items-center text-xs text-gray-500 border-t border-gray-700 pt-2">
+                        <span class="line-clamp-1">
+                            {{ game.description or '暂无简介' }}
+                        </span>
                         <span class="bg-gray-700 text-white px-2 py-0.5 rounded">热度: {{ game.views }}</span>
                     </div>
                 </div>
@@ -46,7 +53,7 @@
             {% if not games %}
             <div class="col-span-full text-center py-12 text-gray-500">
                 <p class="text-xl">暂无游戏</p>
-                <p class="text-sm mt-2">请在 games_repo 文件夹放入 HTML 文件并刷新</p>
+                <p class="text-sm mt-2">点击右上角的“上传新游戏”来添加第一个游戏吧！</p>
             </div>
             {% endif %}
         </div>

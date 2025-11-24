@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>简易版糖豆人 (Mini Fall Guys)</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: 'Arial', sans-serif; }
+        #ui {
+            position: absolute;
+            top: 20px;
+            width: 100%;
+            text-align: center;
+            color: white;
+            text-shadow: 2px 2px 0 #000;
+            pointer-events: none;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        #instructions {
+            font-size: 16px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <div>🏁 目标：冲向终点！</div>
+        <div id="instructions">WASD 或 方向键移动 | 空格键跳跃</div>
+    </div>
+
+    <!-- 引入 Three.js -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // --- 游戏配置 ---
+        const COLORS = {
+            sky: 0x87CEEB,
+            ground: 0xFFD700, // 金黄色地面
+            player: 0xFF69B4, // 糖豆粉
+            obstacle: 0x4169E1, // 障碍蓝
+            finish: 0x32CD32  // 终点绿
+        };
+
+        // --- 场景初始化 ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(COLORS.sky);
+        scene.fog = new THREE.Fog(COLORS.sky, 10, 50);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+
+        // --- 灯光 ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(-10, 20, 0);
+        dirLight.castShadow = true;
+        dirLight.shadow.camera.top = 20;
+        dirLight.shadow.camera.bottom = -20;
+        dirLight.shadow.camera.left = -20;
+        dirLight.shadow.camera.right = 20;
+        scene.add(dirLight);
+
+        // --- 玩家 (糖豆) ---
+        const playerGeometry = new THREE.CapsuleGeometry(0.5, 1, 4, 8);
+        const playerMaterial = new THREE.MeshStandardMaterial({ color: COLORS.player });
+        const player = new THREE.Mesh(playerGeometry, playerMaterial);
+        player.castShadow = true;
+        player.position.y = 5; // 出生高度
+        player.position.x = 0;
+        player.position.z = 0;
+        scene.add(player);
+
+        // --- 地图生成 ---
+        const obstacles = [];
+        const levelLength = 100;
+
+        // 1. 地面
+        const groundGeo = new THREE.BoxGeometry(10, 1, levelLength + 10);
+        const groundMat = new THREE.MeshStandardMaterial({ color: COLORS.ground });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.position.z = levelLength / 2 - 5;
+        ground.position.y = -0.5;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        // 2. 终点线
+        const finishGeo = new THREE.BoxGeometry(10, 0.1, 5);
+        const finishMat = new THREE.MeshBasicMaterial({ color: COLORS.finish });
+        const finishLine = new THREE.Mesh(finishGeo, finishMat);
+        finishLine.position.set(0, 0.01, levelLength);
+        scene.add(finishLine);
+
+        // 3. 障碍物生成函数
+        function createMovingBlock(z, speed, offset) {
+            const geo = new THREE.BoxGeometry(3, 2, 2);
+            const mat = new THREE.MeshStandardMaterial({ color: COLORS.obstacle });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(0, 1, z);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            
+            // 自定义属性用于动画
+            mesh.userData = { 
+                type: 'moving', 
+                speed: speed, 
+                offset: offset,
+                baseX: 0 
+            };
+            
+            scene.add(mesh);
+            obstacles.push(mesh);
+        }
+
+        function createRotatingHammer(z, speed) {
+            const group = new THREE.Group();
+            group.position.set(0, 1.5, z);
+
+            // 杆子
+            const poleGeo = new THREE.CylinderGeometry(0.2, 0.2, 8);
+            const poleMat = new THREE.MeshStandardMaterial({ color: 0x888888 });
+            const pole = new THREE.Mesh(poleGeo, poleMat);
+            pole.rotation.z = Math.PI / 2;
+            pole.castShadow = true;
+            group.add(pole);
+
+            // 锤头
+            const headGeo = new THREE.BoxGeometry(1, 2, 1);
+            const headMat = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+            const head1 = new THREE.Mesh(headGeo, headMat);
+            head1.position.x = 3.5;
+            group.add(head1);
+            
+            const head2 = new THREE.Mesh(headGeo, headMat);
+            head2.position.x = -3.5;
+            group.add(head2);
+
+            group.userData = { type: 'rotating', speed: speed };
+            scene.add(group);
+            obstacles.push(group);
+        }
+
+        // --- 关卡设计 ---
+        // 简单的关卡布局
+        for(let z = 15; z < levelLength - 5; z += 15) {
+            if (z % 30 === 0) {
+                createRotatingHammer(z, 0.05);
+            } else {
+                createMovingBlock(z, 0.08, Math.random() * Math.PI);
+            }
+        }
+
+        // --- 物理变量 ---
+        let velocity = new THREE.Vector3();
+        let onGround = false;
+        const speed = 0.15;
+        const jumpForce = 0.4;
+        const gravity = 0.015;
+
+        // --- 输入控制 ---
+        const keys = { w: false, a: false, s: false, d: false, space: false };
+
+        window.addEventListener('keydown', (e) => {
+            switch(e.key.toLowerCase()) {
+                case 'w': keys.w = true; break;
+                case 'a': keys.a = true; break;
+                case 's': keys.s = true; break;
+                case 'd': keys.d = true; break;
+                case ' ': keys.space = true; break;
+                case 'arrowup': keys.w = true; break;
+                case 'arrowdown': keys.s = true; break;
+                case 'arrowleft': keys.a = true; break;
+                case 'arrowright': keys.d = true; break;
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            switch(e.key.toLowerCase()) {
+                case 'w': keys.w = false; break;
+                case 'a': keys.a = false; break;
+                case 's': keys.s = false; break;
+                case 'd': keys.d = false; break;
+                case ' ': keys.space = false; break;
+                case 'arrowup': keys.w = false; break;
+                case 'arrowdown': keys.s = false; break;
+                case 'arrowleft': keys.a = false; break;
+                case 'arrowright': keys.d = false; break;
+            }
+        });
+
+        // --- 碰撞检测 (简易 AABB) ---
+        function checkCollision(player, obstacle) {
+            const pBox = new THREE.Box3().setFromObject(player);
+            const oBox = new THREE.Box3().setFromObject(obstacle);
+            return pBox.intersectsBox(oBox);
+        }
+
+        // --- 游戏循环 ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // 1. 玩家移动逻辑
+            if (keys.w) player.position.z += speed;
+            if (keys.s) player.position.z -= speed; // 允许后退，但在糖豆人中主要是前进
+            if (keys.a) player.position.x += speed;
+            if (keys.d) player.position.x -= speed;
+
+            // 跳跃与重力
+            if (keys.space && onGround) {
+                velocity.y = jumpForce;
+                onGround = false;
+            }
+
+            player.position.y += velocity.y;
+
+            // 地面检测
+            if (player.position.y <= 1) { // 胶囊高度的一半
+                player.position.y = 1;
+                velocity.y = 0;
+                onGround = true;
+            } else {
+                velocity.y -= gravity;
+            }
+
+            // 掉落检测 (掉出平台)
+            if (player.position.y < -5 || Math.abs(player.position.x) > 6) {
+                resetGame();
+            }
+
+            // 2. 障碍物动画
+            const time = Date.now() * 0.001;
+            obstacles.forEach(obj => {
+                if (obj.userData.type === 'moving') {
+                    // 左右移动
+                    obj.position.x = Math.sin(time * 2 + obj.userData.offset) * 3.5;
+                    
+                    // 碰撞检测
+                    if (checkCollision(player, obj)) {
+                        // 简单的击飞效果
+                        velocity.y = 0.3;
+                        player.position.z -= 1; 
+                    }
+                } else if (obj.userData.type === 'rotating') {
+                    // 旋转
+                    obj.rotation.y += obj.userData.speed;
+                    
+                    // 旋转物体的碰撞稍微复杂，这里做简单的距离检测简化
+                    if (player.position.distanceTo(obj.position) < 3) {
+                        // 如果在范围内，且高度接近
+                        if (player.position.y < 3) {
+                             // 简单的击飞
+                             let pushDir = new THREE.Vector3().subVectors(player.position, obj.position).normalize();
+                             player.position.x += pushDir.x * 0.5;
+                             player.position.z += pushDir.z * 0.5;
+                        }
+                    }
+                }
+            });
+
+            // 3. 相机跟随
+            camera.position.x = player.position.x * 0.3; // 稍微平滑的X轴跟随
+            camera.position.y = player.position.y + 6;
+            camera.position.z = player.position.z - 10; // 相机在背后
+            camera.lookAt(player.position);
+
+            // 4. 胜利检测
+            if (player.position.z >= levelLength) {
+                alert("🎉 恭喜！你赢了！");
+                resetGame();
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function resetGame() {
+            player.position.set(0, 5, 0);
+            velocity.set(0, 0, 0);
+        }
+
+        // 窗口大小调整
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>
