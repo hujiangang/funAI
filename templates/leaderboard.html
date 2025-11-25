@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}
+    周排行榜
+{% endblock %}
+
+{% block head %}
+<style>
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -29px;
+        top: 24px;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background-color: #8b5cf6;
+        z-index: 10;
+    }
+    .timeline-item::after {
+        content: '';
+        position: absolute;
+        left: -22px;
+        top: 40px;
+        width: 2px;
+        height: calc(100% + 16px);
+        background-color: #374151;
+    }
+    .timeline-item:last-child::after {
+        display: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h2 class="text-2xl font-bold mb-8 text-center">
+        <span class="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600">
+            ⭐ 本周星级排行榜 Top 10
+        </span>
+    </h2>
+    
+    <div class="max-w-2xl mx-auto relative">
+        <!-- 时间线垂直线 -->
+        <div class="absolute left-0 ml-[-22px] top-0 bottom-0 w-0.5 bg-gray-700 hidden md:block"></div>
+        
+        {% if games %}
+            <div class="space-y-8">
+                <!-- 游戏内容会动态生成 -->
+                {% for game in games %}
+                <div class="timeline-item relative pl-4 md:pl-12 bg-gray-800 rounded-xl p-5 border border-gray-700">
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="text-lg font-bold">{{ game.title }}</h3>
+                        <span class="text-yellow-400">{% for i in range(game.rating | int) %}⭐{% endfor %}</span>
+                    </div>
+                    <p class="text-gray-400 text-sm mb-3">{{ game.description or '暂无简介' }}</p>
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="text-gray-500">👤 {{ game.author }}</span>
+                        <span class="bg-gray-700 px-1.5 py-0.5 rounded">🤖 {{ game.ai_model }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center py-12 text-gray-500">
+                <p class="text-xl">本周暂无排行榜数据</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
