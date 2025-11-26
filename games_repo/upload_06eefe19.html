@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>记忆黑市 — 灵魂碎片拼图</title>
+  <style>
+    :root{
+      --bg:#0f1226; --panel:#11121a; --accent:#ffb86b; --muted:#9aa3c7;
+    }
+    *{box-sizing:border-box;font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial}
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#071020 0%,var(--bg) 60%);color:#e6eef8}
+    .wrap{max-width:980px;margin:28px auto;padding:20px}
+    header{display:flex;align-items:center;gap:16px}
+    .logo{width:64px;height:64px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#ff7ab6);display:flex;align-items:center;justify-content:center;font-weight:700;color:#1b1720}
+    h1{margin:0;font-size:20px}
+    p.lead{margin:6px 0 0;color:var(--muted);font-size:13px}
+
+    main{display:grid;grid-template-columns:320px 1fr;gap:18px;margin-top:18px}
+    .panel{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:14px;border-radius:12px;box-shadow:0 6px 20px rgba(2,6,23,0.6)}
+
+    .left{position:relative}
+    .stats{display:flex;flex-direction:column;gap:8px}
+    .stat{display:flex;justify-content:space-between;align-items:center;padding:8px;border-radius:8px;background:rgba(255,255,255,0.02)}
+    .meter{height:10px;background:rgba(255,255,255,0.05);border-radius:999px;overflow:hidden}
+    .meter > i{display:block;height:100%;background:linear-gradient(90deg,#ffd28a,#ff7ab6);width:50%}
+
+    .board{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}
+    .tile{aspect-ratio:1/1;background:linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.02));border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;user-select:none;transition:transform .18s ease, box-shadow .12s}
+    .tile:active{transform:translateY(2px)}
+    .tile.revealed{background:linear-gradient(180deg,#1b1026,#2a1735);box-shadow:inset 0 0 40px rgba(0,0,0,0.5)}
+    .tile .emoji{font-size:28px}
+    .tile .label{position:absolute;bottom:8px;left:8px;right:8px;font-size:11px;color:var(--muted);text-align:center}
+
+    .right{display:flex;flex-direction:column;gap:12px}
+    .log{height:200px;overflow:auto;padding:8px;border-radius:8px;background:rgba(0,0,0,0.12);font-size:13px}
+    .controls{display:flex;gap:8px}
+    button{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px 12px;border-radius:8px;color:inherit;cursor:pointer}
+    button:active{transform:translateY(1px)}
+
+    footer{margin-top:18px;color:var(--muted);font-size:13px}
+
+    /* small */
+    @media(max-width:880px){main{grid-template-columns:1fr;}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo">MM</div>
+      <div>
+        <h1>记忆黑市：灵魂碎片拼图</h1>
+        <p class="lead">一个融合记忆与赌运气的创意匹配游戏 —— 收集你遗失的三段记忆，同时提防虚假的碎片与污染事件。</p>
+      </div>
+    </header>
+
+    <main>
+      <section class="panel left">
+        <div class="stats">
+          <div class="stat"><div>记忆指数</div><div class="meter" title="记忆指数"><i id="memoryMeter"></i></div></div>
+          <div class="stat"><div>已收集碎片</div><div id="collected">0 / 3</div></div>
+          <div class="stat"><div>线索槽</div><div id="clues">0 / 5</div></div>
+        </div>
+
+        <div style="margin-top:12px;display:flex;gap:8px;align-items:center;">
+          <button id="shuffleBtn">重新洗牌（新关卡）</button>
+          <button id="hintBtn">花费10记忆指数获得线索</button>
+        </div>
+
+        <div class="board panel" id="board" style="margin-top:14px"></div>
+
+        <div style="margin-top:12px;font-size:13px;color:var(--muted)">玩法提示：<br>点击卡牌翻开碎片。配对三张属于同一记忆主题的碎片即可重建那段记忆。某些卡牌会是“污染”或“影子商人”的陷阱，会扣减记忆指数或污染线索。</div>
+      </section>
+
+      <aside class="panel right">
+        <div>
+          <strong>目标</strong>
+          <div style="color:var(--muted);margin-top:6px">收集并重建 <strong>3 段记忆</strong>。记忆指数降为 0 即失败。</div>
+        </div>
+
+        <div>
+          <strong>日志</strong>
+          <div class="log" id="log"></div>
+        </div>
+
+        <div>
+          <strong>背包 / 线索</strong>
+          <div style="margin-top:8px;color:var(--muted)"><span id="backpack">空</span></div>
+        </div>
+
+        <div style="margin-top:8px" class="controls">
+          <button id="useClueBtn">使用线索（消耗 1 线索）</button>
+          <button id="tradeBtn">与影子商人交易（有风险）</button>
+        </div>
+
+      </aside>
+    </main>
+
+    <footer class="panel">
+      <div>创意小游戏 · 单文件 HTML。你可以把此文件保存为 <code>memory-market.html</code> 并在浏览器打开来玩。</div>
+    </footer>
+  </div>
+
+  <script>
+    // Game data
+    const MEMORIES = [
+      {id:'lostToy', name:'曾经失去的东西', emoji:'🪀'},
+      {id:'beloved', name:'最珍惜的人', emoji:'💖'},
+      {id:'secret', name:'无法说出口的秘密', emoji:'🔐'},
+    ];
+
+    const TILES_PER_ROW = 4; // 4x3 grid
+    const ROWS = 3;
+    const TOTAL_TILES = TILES_PER_ROW * ROWS;
+
+    let state = {
+      memoryIndex: 50,
+      collected: 0,
+      clues: 0,
+      backpack: [],
+      revealed: [],
+      board: [],
+      locked: false,
+      builtMemories: new Set()
+    }
+
+    const boardEl = document.getElementById('board');
+    const meterEl = document.getElementById('memoryMeter');
+    const collectedEl = document.getElementById('collected');
+    const cluesEl = document.getElementById('clues');
+    const logEl = document.getElementById('log');
+    const backpackEl = document.getElementById('backpack');
+
+    function log(text){
+      const line = document.createElement('div');
+      line.textContent = `${new Date().toLocaleTimeString()} • ${text}`;
+      logEl.prepend(line);
+    }
+
+    function randInt(n){return Math.floor(Math.random()*n)}
+
+    function clamp(v,min,max){return Math.max(min,Math.min(max,v))}
+
+    function updateUI(){
+      meterEl.style.width = clamp(state.memoryIndex,0,100) + '%';
+      collectedEl.textContent = state.collected + ' / ' + MEMORIES.length;
+      cluesEl.textContent = state.clues + ' / 5';
+      backpackEl.textContent = state.backpack.length ? state.backpack.map(t=>t.emoji).join(' ') : '空';
+
+      if(state.memoryIndex<=0){
+        alert('记忆指数降为 0，你失去了自我… 游戏结束。');
+        init();
+      }
+
+      if(state.collected >= MEMORIES.length){
+        alert('恭喜！你重建了全部记忆。回忆涌来，你终于找回了自己。');
+        init();
+      }
+    }
+
+    function init(){
+      state.memoryIndex = 50;
+      state.collected = 0;
+      state.clues = 1; // give one clue to start
+      state.backpack = [];
+      state.revealed = [];
+      state.locked = false;
+      state.builtMemories = new Set();
+      prepareBoard();
+      renderBoard();
+      log('游戏已重置。你带着一丝恐惧走进记忆黑市。');
+      updateUI();
+    }
+
+    function prepareBoard(){
+      // We'll create pairs/triples: for each memory, 3 fragments (total 9), add 3 traps and filler ghosts
+      const fragments = [];
+      // three fragments per real memory
+      MEMORIES.forEach(m => {
+        for(let i=0;i<3;i++) fragments.push({type:'fragment', memId:m.id, name:m.name, emoji:m.emoji});
+      });
+      // add traps: pollution, shadow
+      const traps = [
+        {type:'pollution', name:'污染碎片', emoji:'🦠'},
+        {type:'shadow', name:'影子碎片', emoji:'🕳️'},
+        {type:'glitch', name:'记忆错位', emoji:'⚡'}
+      ];
+      // fill remaining tiles with traps/random
+      while(fragments.length + traps.length < TOTAL_TILES) traps.push({type:'ghost', name:'空白碎片', emoji:'💭'});
+
+      const pool = fragments.concat(traps).slice(0, TOTAL_TILES);
+
+      // shuffle
+      for(let i=pool.length-1;i>0;i--){
+        const j = randInt(i+1);
+        [pool[i],pool[j]] = [pool[j],pool[i]];
+      }
+
+      state.board = pool.map((item,idx)=>({...item, id:idx, revealed:false, matched:false}));
+    }
+
+    function renderBoard(){
+      boardEl.innerHTML = '';
+      state.board.forEach(tile => {
+        const el = document.createElement('div');
+        el.className = 'tile' + (tile.revealed ? ' revealed' : '');
+        el.dataset.id = tile.id;
+        if(tile.revealed){
+          el.innerHTML = `<div class="emoji">${tile.emoji}</div><div class="label">${tile.name}</div>`;
+        } else {
+          el.innerHTML = `<div class="emoji">❓</div>`;
+        }
+        if(tile.matched){
+          el.style.outline = '2px solid rgba(255,255,255,0.06)';
+          el.style.opacity = 0.7;
+          el.style.pointerEvents = 'none';
+        }
+        el.addEventListener('click', ()=>onTileClick(tile.id));
+        boardEl.appendChild(el);
+      });
+    }
+
+    function onTileClick(id){
+      if(state.locked) return;
+      const tile = state.board.find(t=>t.id===id);
+      if(!tile || tile.revealed || tile.matched) return;
+      tile.revealed = true;
+      state.revealed.push(tile);
+      renderBoard();
+      log(`翻开：${tile.name}`);
+
+      // special tiles
+      if(tile.type === 'pollution'){
+        state.memoryIndex -= 12; state.clues = Math.max(0,state.clues-1);
+        log('污染碎片！你的线索被污染，记忆指数下降。');
+        checkAfterReveal();
+        return;
+      }
+      if(tile.type === 'shadow'){
+        // shadow steals a random fragment from backpack if any
+        if(state.backpack.length){
+          const stolen = state.backpack.pop();
+          state.memoryIndex -= 8; log(`影子商人窃取了你的碎片 ${stolen.name}。`);
+        } else { state.memoryIndex -= 6; log('影子商人碰了空。你的记忆被撕扯感到虚弱。'); }
+        checkAfterReveal();
+        return;
+      }
+      if(tile.type === 'glitch'){
+        // shuffle a subset
+        shuffleBoardSegment(); state.memoryIndex -= 5; log('记忆错位：碎片位置发生了微小移动。');
+        checkAfterReveal();
+        return;
+      }
+
+      // normal fragment logic: try to collect 3 of same memId
+      const revealedFragments = state.revealed.filter(r=>r.type==='fragment');
+      // if we have 3 fragments of same memId among revealed or backpack, build memory
+      const counts = {};
+      revealedFragments.forEach(f=>counts[f.memId] = (counts[f.memId]||0)+1);
+
+      // also include backpack
+      state.backpack.filter(b=>b.type==='fragment').forEach(f=>counts[f.memId] = (counts[f.memId]||0)+1);
+
+      for(const memId in counts){
+        if(counts[memId] >= 3 && !state.builtMemories.has(memId)){
+          // build memory: consume three fragments from revealed+backpack
+          consumeFragmentsFor(memId);
+          return;
+        }
+      }
+
+      // if too many revealed (>=3) without building, move one to backpack or penalize
+      if(state.revealed.length >= 3){
+        // move first revealed fragment to backpack if space
+        const frag = state.revealed.find(r=>r.type==='fragment');
+        if(frag){
+          if(state.backpack.length < 3){
+            state.backpack.push(frag);
+            state.board.find(b=>b.id===frag.id).matched = true; // remove from board visually
+            log(`把碎片 ${frag.name} 放入背包。`);
+          } else {
+            state.memoryIndex -= 6; log('背包已满，记忆溢出，你感觉头痛。');
+            // flip back earliest revealed
+            const r = state.revealed.shift();
+            r.revealed = false;
+          }
+        }
+        state.revealed = state.revealed.filter(r=>r.type!=='fragment');
+      }
+
+      checkAfterReveal();
+    }
+
+    function checkAfterReveal(){
+      // small chance of random event
+      if(Math.random() < 0.08){
+        state.memoryIndex -= 4; log('突发事件：黑市巡查，惶恐让你失去一点记忆。');
+      }
+      // flip back unrevealed non-matched fragments after short delay
+      state.locked = true;
+      setTimeout(()=>{
+        state.board.forEach(t=>{ if(!t.matched) t.revealed = false; });
+        state.revealed = [];
+        renderBoard();
+        state.locked = false;
+        updateUI();
+      }, 700);
+    }
+
+    function consumeFragmentsFor(memId){
+      // remove two more fragments from revealed/backpack to make total 3
+      let need = 3;
+      const used = [];
+      // use revealed first
+      for(let i=state.revealed.length-1;i>=0 && need>0;i--){
+        const r = state.revealed[i];
+        if(r.type==='fragment' && r.memId===memId){ used.push(r); state.revealed.splice(i,1); need--; }
+      }
+      // then backpack
+      for(let i=state.backpack.length-1;i>=0 && need>0;i--){
+        const b = state.backpack[i];
+        if(b.type==='fragment' && b.memId===memId){ used.push(b); state.backpack.splice(i,1); need--; }
+      }
+      // finally board revealed
+      if(need>0){
+        for(let i=0;i<state.board.length && need>0;i++){
+          const b = state.board[i];
+          if(b.type==='fragment' && b.memId===memId && b.revealed){ used.push(b); b.matched=true; need--; }
+        }
+      }
+
+      state.builtMemories.add(memId);
+      state.collected++;
+      state.memoryIndex = Math.min(100, state.memoryIndex + 18);
+      log(`重建记忆：${MEMORIES.find(m=>m.id===memId).name}。你回想起一段重要的记忆。`);
+
+      // mark matched fragments on board
+      state.board.forEach(b=>{ if(b.type==='fragment' && b.memId===memId) b.matched = true; });
+
+      // give a clue occasionally
+      if(Math.random() < 0.6) { state.clues = Math.min(5, state.clues+1); log('你从重建的记忆里获得了一条线索。'); }
+
+      updateUI();
+      // stall a bit and then continue
+    }
+
+    function shuffleBoardSegment(){
+      // shuffle half the board
+      const start = Math.floor(Math.random() * (TOTAL_TILES/2));
+      const len = Math.floor(Math.random() * (TOTAL_TILES/2)) + 2;
+      const segment = state.board.splice(start,len);
+      for(let i=segment.length-1;i>0;i--){ const j=randInt(i+1); [segment[i],segment[j]]=[segment[j],segment[i]]; }
+      state.board.splice(start,0,...segment);
+      renderBoard();
+    }
+
+    // controls
+    document.getElementById('shuffleBtn').addEventListener('click', ()=>{ init(); log('你在黑市里换了个摊位，新的章程。'); });
+    document.getElementById('hintBtn').addEventListener('click', ()=>{
+      if(state.memoryIndex < 10){ alert('记忆指数不足，无法换取线索。'); return; }
+      state.memoryIndex -= 10; state.clues = Math.min(5, state.clues+1); log('你付出记忆换来一条线索。'); updateUI();
+    });
+    document.getElementById('useClueBtn').addEventListener('click', ()=>{
+      if(state.clues <= 0){ alert('没有线索可用。'); return; }
+      // reveal a random tile's name (not its position) as a hint (semantic clue)
+      state.clues--; const available = state.board.filter(b=>!b.matched);
+      if(available.length===0) { log('没有更多碎片。'); return; }
+      const a = available[randInt(available.length)];
+      log(`线索：你感到一阵回忆的气味 —— ${a.name}。`);
+      updateUI();
+    });
+    document.getElementById('tradeBtn').addEventListener('click', ()=>{
+      // gamble: pay 8 memoryIndex for chance of fragment
+      if(state.memoryIndex < 8){ alert('记忆指数不足，无法交易。'); return; }
+      state.memoryIndex -= 8;
+      const r = Math.random();
+      if(r < 0.5){
+        // give random fragment
+        const availableFragments = state.board.filter(b=>b.type==='fragment' && !b.matched);
+        if(availableFragments.length===0){ log('影子商人无货，只留下一阵寒意。'); updateUI(); return; }
+        const pick = availableFragments[randInt(availableFragments.length)];
+        pick.matched = true; state.backpack.push(pick); log('影子商人给你一块碎片（有点黯淡）。');
+      } else {
+        // bad
+        state.memoryIndex -= 6; state.clues = Math.max(0,state.clues-1); log('影子商人欺骗你，给了你一块污染碎片。');
+      }
+      updateUI(); renderBoard();
+    });
+
+    // start
+    init();
+  </script>
+</body>
+</html>

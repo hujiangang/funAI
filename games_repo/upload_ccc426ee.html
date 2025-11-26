@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>牛顿的思考：从苹果到月亮</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #1a1a2e;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #container {
+            position: relative;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            background: radial-gradient(circle, #2a2a4e 0%, #0f0f1a 100%);
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            pointer-events: none; /* 让点击穿透到下面的按钮 */
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 24px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+            color: #fff;
+        }
+
+        #story-text {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            max-width: 400px;
+            line-height: 1.6;
+            font-size: 16px;
+            transition: all 0.5s ease;
+        }
+
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        button {
+            padding: 10px 25px;
+            font-size: 16px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            background: #ffcc00;
+            color: #333;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transition: transform 0.1s, background 0.2s;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+            background: #ffe066;
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        button:disabled {
+            background: #555;
+            color: #888;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .highlight {
+            color: #ffcc00;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="container">
+        <canvas id="simCanvas" width="800" height="600"></canvas>
+        
+        <div id="ui-layer">
+            <h1>牛顿的思考：引力的觉醒</h1>
+            <div id="story-text">
+                点击“下一步”开始演示牛顿的思考过程。
+            </div>
+        </div>
+
+        <div id="controls">
+            <button id="btn-action" onclick="nextPhase()">开始演示</button>
+            <button id="btn-reset" onclick="resetSim()" style="background-color: #ff6b6b; color: white; display:none;">重置</button>
+        </div>
+    </div>
+
+<script>
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+    const storyBox = document.getElementById('story-text');
+    const actionBtn = document.getElementById('btn-action');
+    const resetBtn = document.getElementById('btn-reset');
+
+    // 状态管理
+    let phase = 0; // 0:Intro, 1:Apple Fall, 2:Cannon Setup, 3:Shot 1, 4:Shot 2, 5:Orbit
+    let animationId;
+    
+    // 物理参数
+    const EARTH_RADIUS = 120;
+    const EARTH_CENTER = { x: 400, y: 300 + EARTH_RADIUS + 150 }; // 地球在底部 (第一幕)
+    const EARTH_CENTER_SPACE = { x: 400, y: 300 }; // 地球在中间 (第二幕)
+    
+    // 物体状态
+    let apple = { x: 0, y: 0, vy: 0, active: false, type: 'apple' };
+    let projectile = { x: 0, y: 0, vx: 0, vy: 0, path: [], active: false, crash: false };
+    
+    // 视觉缩放
+    let currentScale = 1;
+    let targetScale = 1;
+    let currentCenter = { ...EARTH_CENTER };
+    let targetCenter = { ...EARTH_CENTER };
+
+    // 初始化绘制循环
+    function loop() {
+        update();
+        draw();
+        animationId = requestAnimationFrame(loop);
+    }
+
+    function update() {
+        // 场景平滑过渡 (摄像机移动)
+        currentCenter.x += (targetCenter.x - currentCenter.x) * 0.05;
+        currentCenter.y += (targetCenter.y - currentCenter.y) * 0.05;
+
+        // 第一幕：苹果下落
+        if (phase === 1 && apple.active) {
+            apple.vy += 0.2; // 重力
+            apple.y += apple.vy;
+            // 撞地检测
+            if (apple.y > currentCenter.y - EARTH_RADIUS - 5) { // 5是苹果半径
+                apple.y = currentCenter.y - EARTH_RADIUS - 5;
+                apple.vy = -apple.vy * 0.3; // 弹跳一点点
+                if (Math.abs(apple.vy) < 0.5) {
+                    apple.vy = 0;
+                    apple.active = false; // 停止模拟
+                    actionBtn.disabled = false;
+                    actionBtn.innerText = "思考：如果更高？";
+                }
+            }
+        }
+
+        // 第二幕 & 第三幕：牛顿大炮
+        if ((phase === 3 || phase === 4 || phase === 5) && projectile.active && !projectile.crash) {
+            // 万有引力模拟
+            let dx = projectile.x - currentCenter.x;
+            let dy = projectile.y - currentCenter.y;
+            let dist = Math.sqrt(dx*dx + dy*dy);
+            
+            // 引力公式 F = G*M/r^2 (简化版)
+            // 加速度 a = F/m -> a正比于 1/dist^2
+            const GM = 4000; // 虚拟引力常数
+            let ax = -GM * dx / (dist * dist * dist);
+            let ay = -GM * dy / (dist * dist * dist);
+
+            projectile.vx += ax;
+            projectile.vy += ay;
+            projectile.x += projectile.vx;
+            projectile.y += projectile.vy;
+
+            // 记录轨迹
+            if (frameCount % 3 === 0) {
+                projectile.path.push({x: projectile.x, y: projectile.y});
+                if (projectile.path.length > 200) projectile.path.shift(); // 限制轨迹长度
+            }
+
+            // 撞地检测
+            if (dist < EARTH_RADIUS) {
+                projectile.crash = true;
+                projectile.active = false;
+                if (phase !== 5) {
+                    actionBtn.disabled = false;
+                    actionBtn.innerText = phase === 3 ? "再用力一点！" : "速度再快一点！";
+                }
+            }
+        }
+    }
+
+    let frameCount = 0;
+    function draw() {
+        frameCount++;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 绘制背景星空
+        drawStars();
+
+        // 绘制地球
+        ctx.save();
+        ctx.translate(currentCenter.x, currentCenter.y);
+        
+        // 大气层光晕
+        let grad = ctx.createRadialGradient(0, 0, EARTH_RADIUS, 0, 0, EARTH_RADIUS * 1.2);
+        grad.addColorStop(0, "rgba(100, 149, 237, 0.3)");
+        grad.addColorStop(1, "rgba(100, 149, 237, 0)");
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(0, 0, EARTH_RADIUS * 1.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 地球本体
+        ctx.fillStyle = "#2e86de";
+        ctx.beginPath();
+        ctx.arc(0, 0, EARTH_RADIUS, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // 简单的陆地纹理
+        ctx.fillStyle = "#2ecc71";
+        ctx.beginPath();
+        ctx.arc(0, 0, EARTH_RADIUS * 0.8, 0.2, 1.2); // 假装是大陆
+        ctx.fill();
+        
+        // 绘制高山 (仅在阶段2及以后显示)
+        if (phase >= 2) {
+            ctx.fillStyle = "#95a5a6";
+            ctx.beginPath();
+            ctx.moveTo(0, -EARTH_RADIUS);
+            ctx.lineTo(15, -EARTH_RADIUS - 30); // 山高30
+            ctx.lineTo(30, -EARTH_RADIUS);
+            ctx.fill();
+        } else {
+            // 第一阶段画一棵简单的树
+            ctx.fillStyle = "#8e44ad"; // 牛顿的树
+            // 树干
+            ctx.fillRect(-10, -EARTH_RADIUS - 40, 20, 40);
+            // 树冠
+            ctx.fillStyle = "#27ae60";
+            ctx.beginPath();
+            ctx.arc(0, -EARTH_RADIUS - 50, 30, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        ctx.restore();
+
+        // 绘制苹果 (阶段1)
+        if (phase === 1) {
+            ctx.save();
+            ctx.translate(currentCenter.x, currentCenter.y); // 跟随地球坐标系
+            ctx.fillStyle = "#e74c3c";
+            ctx.beginPath();
+            // 苹果相对地球中心的位置
+            // 初始位置设定在树冠下
+            let drawX = apple.x; 
+            // apple.y 是相对于屏幕的，这里需要转换一下逻辑，
+            // 简单起见，phase 1 我们直接用屏幕坐标画
+            ctx.restore();
+            
+            ctx.fillStyle = "#e74c3c";
+            ctx.beginPath();
+            ctx.arc(apple.x, apple.y, 6, 0, Math.PI * 2);
+            ctx.fill();
+            // 苹果蒂
+            ctx.strokeStyle = "#5d4037";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(apple.x, apple.y - 6);
+            ctx.lineTo(apple.x + 2, apple.y - 10);
+            ctx.stroke();
+        }
+
+        // 绘制炮弹/月球 (阶段3+)
+        if (phase >= 3) {
+            // 绘制轨迹
+            if (projectile.path.length > 0) {
+                ctx.strokeStyle = "rgba(255, 255, 0, 0.5)";
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(projectile.path[0].x, projectile.path[0].y);
+                for (let p of projectile.path) {
+                    ctx.lineTo(p.x, p.y);
+                }
+                ctx.stroke();
+            }
+
+            // 绘制物体
+            if (!projectile.crash) {
+                ctx.fillStyle = phase === 5 ? "#ecf0f1" : "#e74c3c"; // 轨道状态变白(月球)
+                ctx.beginPath();
+                ctx.arc(projectile.x, projectile.y, 5, 0, Math.PI * 2);
+                ctx.fill();
+                // 如果是月球，加点光晕
+                if (phase === 5) {
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = "white";
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                }
+            } else {
+                // 撞击效果
+                ctx.fillStyle = "orange";
+                ctx.font = "20px Arial";
+                ctx.fillText("💥", projectile.x - 10, projectile.y + 5);
+            }
+        }
+    }
+
+    // 简单的星空背景
+    const stars = [];
+    for(let i=0; i<100; i++) {
+        stars.push({
+            x: Math.random() * 800,
+            y: Math.random() * 600,
+            size: Math.random() * 2
+        });
+    }
+    function drawStars() {
+        ctx.fillStyle = "white";
+        for(let s of stars) {
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, s.size, 0, Math.PI*2);
+            ctx.fill();
+        }
+    }
+
+    // 流程控制器
+    function nextPhase() {
+        actionBtn.disabled = true;
+
+        if (phase === 0) {
+            // 开始：苹果场景
+            phase = 1;
+            storyBox.innerHTML = "1666年，伍尔索普庄园。<br>牛顿坐在树下，看到一颗<span class='highlight'>苹果</span>垂直落下。<br>他思考：为什么它总是落向地心？";
+            
+            // 设置苹果初始位置 (屏幕坐标)
+            apple.x = 400 + 10; 
+            apple.y = currentCenter.y - EARTH_RADIUS - 60; // 树上
+            apple.active = true;
+            apple.vy = 0;
+            
+        } else if (phase === 1) {
+            // 切换到太空视角 (思维实验)
+            phase = 2;
+            storyBox.innerHTML = "牛顿展开了想象：<br>如果我在极高的山顶架设一门大炮，<br>像扔苹果一样把炮弹水平射出，会发生什么？";
+            actionBtn.innerText = "发射第一枚炮弹";
+            actionBtn.disabled = false;
+            
+            // 移动相机
+            targetCenter = EARTH_CENTER_SPACE;
+
+        } else if (phase === 2) {
+            // 发射 1 (坠落)
+            phase = 3;
+            storyBox.innerHTML = "<b>速度较慢时：</b><br>炮弹受引力拉扯，画出一条抛物线，最后落回地面。<br>这和苹果落地本质是一样的。";
+            fireCannon(2); // 低速
+
+        } else if (phase === 3) {
+            // 发射 2 (更远)
+            phase = 4;
+            storyBox.innerHTML = "<b>速度增加后：</b><br>炮弹飞得更远了。<br>虽然引力在把它往下拉，但它前进了很远才落地。";
+            fireCannon(3.5); // 中速
+
+        } else if (phase === 4) {
+            // 发射 3 (轨道)
+            phase = 5;
+            storyBox.innerHTML = "<b>速度足够快时 (第一宇宙速度)：</b><br>神奇的事情发生了！<br>它下落的弧度正好等于地球表面的曲率。<br><b>它依然在“掉落”，但永远掉不到地上。这就是月球绕地的原理。</b>";
+            fireCannon(5.3); // 轨道速度
+            actionBtn.style.display = 'none';
+            resetBtn.style.display = 'block';
+        }
+    }
+
+    function fireCannon(vx) {
+        projectile.active = true;
+        projectile.crash = false;
+        projectile.path = [];
+        // 发射点：地球中心 + 半径 + 山高 (屏幕坐标)
+        projectile.x = currentCenter.x + 15; // 山顶x
+        projectile.y = currentCenter.y - EARTH_RADIUS - 30; // 山顶y
+        projectile.vx = vx;
+        projectile.vy = 0;
+    }
+
+    function resetSim() {
+        phase = 0;
+        targetCenter = { ...EARTH_CENTER };
+        currentCenter = { ...EARTH_CENTER }; // 立即复位避免动画延迟问题
+        apple.active = false;
+        projectile.active = false;
+        projectile.path = [];
+        
+        storyBox.innerHTML = "点击“开始演示”重现牛顿的顿悟时刻。";
+        actionBtn.style.display = 'block';
+        actionBtn.innerText = "开始演示";
+        actionBtn.disabled = false;
+        resetBtn.style.display = 'none';
+    }
+
+    // 启动循环
+    loop();
+
+</script>
+</body>
+</html>

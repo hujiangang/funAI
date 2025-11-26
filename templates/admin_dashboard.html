@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}管理员仪表盘{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-gray-800">管理员仪表盘</h1>
+        <div class="flex space-x-4">
+            <a href="/admin/refresh" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
+                刷新游戏库
+            </a>
+            <a href="/admin/logout" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition">
+                退出登录
+            </a>
+        </div>
+    </div>
+
+    <!-- 统计信息卡片 -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h3 class="text-lg font-semibold text-gray-600 mb-2">游戏总数</h3>
+            <p class="text-3xl font-bold text-blue-600">{{ total_games }}</p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h3 class="text-lg font-semibold text-gray-600 mb-2">总浏览量</h3>
+            <p class="text-3xl font-bold text-green-600">{{ total_views }}</p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h3 class="text-lg font-semibold text-gray-600 mb-2">总评分次数</h3>
+            <p class="text-3xl font-bold text-purple-600">{{ total_ratings }}</p>
+        </div>
+    </div>
+
+    <!-- 游戏列表 -->
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">标题</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作者</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">AI模型</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">评分</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">浏览量</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for game in games %}
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ game.id }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ game.title }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ game.author }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ game.ai_model }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {% if game.rating_count > 0 %}
+                                {{ game.rating }} ({{ game.rating_count }})
+                            {% else %}
+                                暂无评分
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ game.views }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <div class="flex space-x-2">
+                                <a href="/play/{{ game.id }}" class="text-blue-600 hover:text-blue-900">查看</a>
+                                <form action="/admin/delete/{{ game.id }}" method="post" onsubmit="return confirm('确定要删除这个游戏吗？');">
+                                    <button type="submit" class="text-red-600 hover:text-red-900">删除</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if not games %}
+    <div class="text-center py-12 bg-white rounded-lg shadow-md mt-8">
+        <p class="text-gray-600">暂无游戏数据</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
