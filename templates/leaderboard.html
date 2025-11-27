@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}
-    周排行榜
+周排行榜
 {% endblock %}
 
 {% block head %}
@@ -17,6 +17,7 @@
         background-color: #8b5cf6;
         z-index: 10;
     }
+
     .timeline-item::after {
         content: '';
         position: absolute;
@@ -26,6 +27,7 @@
         height: calc(100% + 16px);
         background-color: #374151;
     }
+
     .timeline-item:last-child::after {
         display: none;
     }
@@ -39,32 +41,61 @@
             ⭐ 本周星级排行榜 Top 10
         </span>
     </h2>
-    
     <div class="max-w-2xl mx-auto relative">
         <!-- 时间线垂直线 -->
         <div class="absolute left-0 ml-[-22px] top-0 bottom-0 w-0.5 bg-gray-700 hidden md:block"></div>
-        
+
         {% if games %}
-            <div class="space-y-8">
-                <!-- 游戏内容会动态生成 -->
-                {% for game in games %}
-                <div class="timeline-item relative pl-4 md:pl-12 bg-gray-800 rounded-xl p-5 border border-gray-700">
-                    <div class="flex justify-between items-start mb-2">
-                        <h3 class="text-lg font-bold">{{ game.title }}</h3>
-                        <span class="text-yellow-400">{% for i in range(game.rating | int) %}⭐{% endfor %}</span>
+        <div class="space-y-8">
+            <!-- 游戏内容会动态生成 -->
+            {% for game in games %}
+            <div class="timeline-item relative pl-4 md:pl-12">
+                <a href="/play/{{ game.id }}" class="block group">
+                    <div
+                        class="bg-gray-800 rounded-xl p-5 border border-gray-700 transition-all duration-300 transform group-hover:scale-[1.02] group-hover:bg-gray-750 group-hover:border-purple-500/50 group-hover:shadow-lg group-hover:shadow-purple-500/20">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="text-lg font-bold group-hover:text-purple-400 transition-colors">{{ game.title }}
+                            </h3>
+                            <span class="text-yellow-400">{% for i in range(game.rating | int) %}⭐{% endfor %}</span>
+                        </div>
+                        <p class="text-gray-400 text-sm mb-3 line-clamp-2">{{ game.description or '暂无简介' }}</p>
+                        <div class="flex justify-between items-center text-xs">
+                            <div class="flex items-center gap-3">
+                                <span class="text-gray-500 flex items-center gap-1">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z">
+                                        </path>
+                                    </svg>
+                                    {{ game.author }}
+                                </span>
+                                <span
+                                    class="bg-gray-700 px-2 py-0.5 rounded-full text-gray-300 flex items-center gap-1">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                    </svg>
+                                    {{ game.ai_model }}
+                                </span>
+                            </div>
+                            <span
+                                class="text-purple-400 font-medium opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                                立即试玩
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                                </svg>
+                            </span>
+                        </div>
                     </div>
-                    <p class="text-gray-400 text-sm mb-3">{{ game.description or '暂无简介' }}</p>
-                    <div class="flex justify-between items-center text-xs">
-                        <span class="text-gray-500">👤 {{ game.author }}</span>
-                        <span class="bg-gray-700 px-1.5 py-0.5 rounded">🤖 {{ game.ai_model }}</span>
-                    </div>
-                </div>
-                {% endfor %}
+                </a>
             </div>
+            {% endfor %}
+        </div>
         {% else %}
-            <div class="text-center py-12 text-gray-500">
-                <p class="text-xl">本周暂无排行榜数据</p>
-            </div>
+        <div class="text-center py-12 text-gray-500">
+            <p class="text-xl">暂无排行榜数据</p>
+        </div>
         {% endif %}
     </div>
 </div>

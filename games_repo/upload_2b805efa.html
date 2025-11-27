@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>HTML5 物理弹射游戏 (Matter.js)</title>
+    <!-- 引入 Matter.js 物理引擎 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: linear-gradient(to bottom, #90c9f0 0%, #c4e5fa 100%); /* 天空背景 */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+        }
+        #ui-layer {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            pointer-events: none;
+            color: #333;
+        }
+        h1 { margin: 0; font-size: 24px; color: #d35400; text-shadow: 2px 2px 0px #fff; }
+        p { margin: 5px 0; font-size: 14px; color: #555; }
+        #score-board { font-size: 20px; font-weight: bold; color: #2ecc71; text-shadow: 1px 1px 0 #fff; }
+        
+        #reset-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 4px 0 #c0392b;
+            pointer-events: auto;
+        }
+        #reset-btn:active { transform: translateY(4px); box-shadow: none; }
+    </style>
+</head>
+<body>
+
+    <div id="ui-layer">
+        <h1>愤怒的小球</h1>
+        <p>拖拽红色小球打击绿色方块/小球</p>
+        <div id="score-board">分数: <span id="score">0</span></div>
+    </div>
+    <button id="reset-btn" onclick="resetGame()">重置关卡</button>
+
+    <script>
+        // --- 模块别名 ---
+        const Engine = Matter.Engine,
+              Render = Matter.Render,
+              Runner = Matter.Runner,
+              Composites = Matter.Composites,
+              Common = Matter.Common,
+              MouseConstraint = Matter.MouseConstraint,
+              Mouse = Matter.Mouse,
+              World = Matter.World,
+              Bodies = Matter.Bodies,
+              Body = Matter.Body,
+              Events = Matter.Events,
+              Vector = Matter.Vector,
+              Composite = Matter.Composite,
+              Constraint = Matter.Constraint;
+
+        // --- 游戏设置 ---
+        let engine, world, render, runner;
+        let bird, sling, firing = false;
+        let pigs = [];
+        let score = 0;
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        
+        // 弹弓位置
+        const anchorX = 200;
+        const anchorY = height - 150;
+
+        function init() {
+            // 1. 创建引擎
+            engine = Engine.create();
+            world = engine.world;
+
+            // 2. 创建渲染器 (我们将使用自定义渲染循环来画漂亮的图，而不是Matter自带的线框调试模式)
+            // 这里创建一个 Canvas 放在 body 里
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            document.body.appendChild(canvas);
+            const ctx = canvas.getContext('2d');
+
+            // 3. 添加鼠标控制
+            const mouse = Mouse.create(canvas);
+            const mouseConstraint = MouseConstraint.create(engine, {
+                mouse: mouse,
+                constraint: {
+                    stiffness: 0.1, // 拖拽刚度
+                    render: { visible: false }
+                }
+            });
+            
+            // 解决滚轮缩放问题
+            mouse.element.removeEventListener("mousewheel", mouse.mousewheel);
+            mouse.element.removeEventListener("DOMMouseScroll", mouse.mousewheel);
+
+            World.add(world, mouseConstraint);
+
+            // --- 监听鼠标事件 (发射逻辑) ---
+            Events.on(mouseConstraint, 'enddrag', function(e) {
+                if (e.body === bird) {
+                    firing = true;
+                }
+            });
+
+            Events.on(engine, 'afterUpdate', function() {
+                // 如果发射中，且小鸟离弹弓中心够远，且被松开 -> 断开约束
+                if (firing && bird) {
+                    // 如果小鸟已经飞出一段距离或者速度够快，断开连接
+                    const dist = Vector.magnitude(Vector.sub(bird.position, {x: anchorX, y: anchorY}));
+                    // 这里做一个简单的逻辑：松手的一瞬间其实 constraint 还在尝试拉回，
+                    // 我们延迟一帧移除约束，让弹力生效
+                    setTimeout(() => {
+                        sling.bodyB = null;
+                        sling.render.visible = false;
+                    }, 20);
+                    firing = false;
+                    
+                    // 3秒后生成新鸟（如果需要连发逻辑，这里暂不实现，仅做单发重置）
+                }
+            });
+
+            // --- 碰撞检测 (消灭猪猪) ---
+            Events.on(engine, 'collisionStart', function(event) {
+                const pairs = event.pairs;
+                pairs.forEach(pair => {
+                    const bodyA = pair.bodyA;
+                    const bodyB = pair.bodyB;
+                    
+                    // 检查是否有物体是猪
+                    const pigBody = bodyA.label === 'pig' ? bodyA : (bodyB.label === 'pig' ? bodyB : null);
+                    
+                    if (pigBody) {
+                        // 计算碰撞力度
+                        const impactSpeed = Vector.magnitude(Vector.sub(bodyA.velocity, bodyB.velocity));
+                        // 阈值：如果撞击力度超过 5，猪被消灭
+                        if (impactSpeed > 5) {
+                            removePig(pigBody);
+                        }
+                    }
+                });
+            });
+
+            // 4. 构建场景
+            setupLevel();
+
+            // 5. 启动自定义渲染循环
+            (function renderLoop() {
+                window.requestAnimationFrame(renderLoop);
+                Engine.update(engine, 1000 / 60);
+                
+                // 清空画布
+                ctx.clearRect(0, 0, width, height);
+                
+                // 画背景草地
+                ctx.fillStyle = "#5D9634";
+                ctx.fillRect(0, height - 50, width, 50);
+                
+                // 绘制所有刚体
+                const bodies = Composite.allBodies(world);
+                
+                // 先画弹弓后半部分 (看起来像夹着鸟)
+                drawSlingBack(ctx);
+
+                // 画物体
+                bodies.forEach(b => {
+                    if(b.render.visible !== false) drawBody(ctx, b);
+                });
+
+                // 画弹弓前半部分
+                drawSlingFront(ctx);
+
+                // 画皮筋
+                if (sling.bodyB) {
+                    drawBand(ctx, {x: anchorX, y: anchorY}, bird.position);
+                }
+            })();
+        }
+
+        // --- 关卡生成 ---
+        function setupLevel() {
+            Composite.clear(world);
+            Engine.clear(engine);
+            pockets = [];
+            score = 0;
+            updateScore(0);
+            
+            // 重新添加鼠标约束 (因为 world 被清空了)
+            // 简单起见，我们只清除非静态物体，或者重新初始化整个 World
+            // 这里为了简单，我们手动移除除了 mouseConstraint 以外的物体，或者重新把 mouseConstraint 加回去
+            // 更稳健的做法是只移除 bodies
+            
+            // 地面
+            const ground = Bodies.rectangle(width/2, height - 25, width, 50, { 
+                isStatic: true, 
+                render: { fillStyle: '#5D9634' },
+                label: 'ground'
+            });
+
+            // 弹弓底座 (视觉不可见，用于物理阻挡防止鸟往后飞穿模，可选)
+            const stand = Bodies.rectangle(anchorX, height - 100, 20, 150, { isStatic: true, render: { visible: false }, collisionFilter: { mask: 0 } });
+
+            // 小鸟
+            bird = Bodies.circle(anchorX, anchorY, 15, { 
+                density: 0.004,
+                restitution: 0.6,
+                label: 'bird'
+            });
+
+            // 弹弓约束 (皮筋)
+            sling = Constraint.create({
+                pointA: { x: anchorX, y: anchorY },
+                bodyB: bird,
+                stiffness: 0.05,
+                damping: 0.01,
+                length: 0
+            });
+
+            // 敌人与障碍物 (在右侧堆叠)
+            const stackX = width * 0.7;
+            const stackY = height - 60;
+            const boxSize = 50;
+
+            // 生成金字塔结构
+            for (let i = 0; i < 3; i++) {
+                for (let j = 0; j < 3 - i; j++) {
+                    // 木箱
+                    let box = Bodies.rectangle(
+                        stackX + j * boxSize + i * (boxSize/2), 
+                        stackY - i * boxSize, 
+                        boxSize - 2, boxSize - 2, 
+                        { label: 'box', friction: 0.5 }
+                    );
+                    World.add(world, box);
+                }
+            }
+
+            // 放置猪猪
+            let pig1 = Bodies.circle(stackX + boxSize, stackY - boxSize * 3 - 20, 18, { label: 'pig' });
+            let pig2 = Bodies.circle(stackX + boxSize/2, stackY - 20, 18, { label: 'pig' });
+            let pig3 = Bodies.circle(stackX + boxSize * 1.5, stackY - 20, 18, { label: 'pig' });
+            
+            pigs = [pig1, pig2, pig3];
+
+            World.add(world, [ground, stand, bird, sling, pig1, pig2, pig3]);
+            
+            // 恢复鼠标控制
+            // 注意：MouseConstraint 依赖于 body 的引用，如果 body 重建了，不需要重建 mouseConstraint，但需要确保它在 world 里
+            // 在本例中，因为 world.clear 比较暴力，我们需确保 mouseConstraint 还在
+            // 最简单的方法：world clear 后，手动保留或重新添加 mouseConstraint
+            // 修正：Matter.Composite.clear(world) 会移除所有，我们需要重新添加
+            // 为了方便，我们在 init 外面存一下 mouseConstraint 或者在 setupLevel 里重新加
+            const canvas = document.querySelector('canvas');
+            const mouse = Mouse.create(canvas);
+             // 移除滚轮事件防止页面滚动
+            mouse.element.removeEventListener("mousewheel", mouse.mousewheel);
+            mouse.element.removeEventListener("DOMMouseScroll", mouse.mousewheel);
+
+            const mc = MouseConstraint.create(engine, {
+                mouse: mouse,
+                constraint: { stiffness: 0.1, render: { visible: false } }
+            });
+            Events.on(mc, 'enddrag', function(e) { if (e.body === bird) firing = true; });
+            World.add(world, mc);
+        }
+
+        function removePig(pig) {
+            if (!pig) return;
+            // 简单的爆炸效果逻辑（这里只是从世界移除）
+            World.remove(world, pig);
+            // 从数组移除
+            pigs = pigs.filter(p => p !== pig);
+            // 加分
+            score += 100;
+            updateScore(score);
+            
+            // 胜利检测
+            if (pigs.length === 0) {
+                setTimeout(() => alert("关卡清除！胜利！"), 100);
+            }
+        }
+
+        function updateScore(val) {
+            document.getElementById('score').innerText = val;
+        }
+
+        function resetGame() {
+            setupLevel();
+        }
+
+        // --- 绘图辅助函数 ---
+
+        function drawBody(ctx, body) {
+            const pos = body.position;
+            const angle = body.angle;
+            
+            ctx.save();
+            ctx.translate(pos.x, pos.y);
+            ctx.rotate(angle);
+
+            if (body.label === 'bird') {
+                // 画红色小鸟
+                ctx.beginPath();
+                ctx.arc(0, 0, 15, 0, 2 * Math.PI);
+                ctx.fillStyle = '#e74c3c';
+                ctx.fill();
+                ctx.strokeStyle = '#c0392b';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // 眼睛
+                ctx.fillStyle = '#fff';
+                ctx.beginPath(); ctx.arc(4, -5, 4, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(4, 5, 4, 0, Math.PI*2); ctx.fill();
+                // 眼珠
+                ctx.fillStyle = '#000';
+                ctx.beginPath(); ctx.arc(6, -5, 1.5, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(6, 5, 1.5, 0, Math.PI*2); ctx.fill();
+                // 眉毛
+                ctx.fillStyle = '#000';
+                ctx.fillRect(-2, -9, 10, 3);
+                ctx.fillRect(-2, 6, 10, 3);
+                // 嘴巴
+                ctx.fillStyle = '#f1c40f';
+                ctx.beginPath();
+                ctx.moveTo(4, -2);
+                ctx.lineTo(14, 0);
+                ctx.lineTo(4, 2);
+                ctx.fill();
+
+            } else if (body.label === 'pig') {
+                // 画绿色猪
+                ctx.beginPath();
+                ctx.arc(0, 0, 18, 0, 2 * Math.PI);
+                ctx.fillStyle = '#2ecc71';
+                ctx.fill();
+                ctx.strokeStyle = '#27ae60';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // 猪鼻子
+                ctx.fillStyle = '#27ae60';
+                ctx.beginPath(); ctx.ellipse(4, 0, 6, 4, 0, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#1e8449';
+                ctx.beginPath(); ctx.arc(2, -1.5, 1.5, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(2, 1.5, 1.5, 0, Math.PI*2); ctx.fill();
+                
+                // 眼睛
+                ctx.fillStyle = '#fff';
+                ctx.beginPath(); ctx.arc(-4, -6, 3.5, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(-4, 6, 3.5, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#000';
+                ctx.beginPath(); ctx.arc(-3, -6, 1.5, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(-3, 6, 1.5, 0, Math.PI*2); ctx.fill();
+
+            } else if (body.label === 'box') {
+                // 画木箱
+                const w = 48; // slightly smaller than body size
+                const h = 48;
+                ctx.fillStyle = '#d35400';
+                ctx.fillRect(-w/2, -h/2, w, h);
+                // 木纹
+                ctx.strokeStyle = '#a04000';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(-w/2, -h/2, w, h);
+                ctx.beginPath();
+                ctx.moveTo(-w/2, -h/2); ctx.lineTo(w/2, h/2);
+                ctx.moveTo(w/2, -h/2); ctx.lineTo(-w/2, h/2);
+                ctx.stroke();
+
+            } else if (body.label === 'ground') {
+                // 地面可以忽略，已在背景绘制
+            }
+
+            ctx.restore();
+        }
+
+        // 绘制弹弓后部
+        function drawSlingBack(ctx) {
+            ctx.strokeStyle = '#5d4037';
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.moveTo(anchorX, anchorY); 
+            ctx.lineTo(anchorX, height - 50);
+            ctx.stroke();
+        }
+        
+        // 绘制弹弓前部（Y字型）
+        function drawSlingFront(ctx) {
+            ctx.strokeStyle = '#795548';
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            // 左叉
+            ctx.moveTo(anchorX, anchorY);
+            ctx.lineTo(anchorX - 15, anchorY - 40);
+            // 右叉
+            ctx.moveTo(anchorX, anchorY);
+            ctx.lineTo(anchorX + 15, anchorY - 40);
+            ctx.stroke();
+        }
+
+        // 绘制皮筋
+        function drawBand(ctx, p1, p2) {
+            ctx.strokeStyle = '#3e2723';
+            ctx.lineWidth = 4;
+            // 简单的两根线
+            ctx.beginPath();
+            ctx.moveTo(anchorX - 15, anchorY - 40);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(anchorX + 15, anchorY - 40);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+        }
+
+        // 启动
+        init();
+
+    </script>
+</body>
+</html>
