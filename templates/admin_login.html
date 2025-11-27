@@ -1,33 +1,68 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="zh">
 
-{% block title %}管理员登录{% endblock %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理员登录 - AI Game Lab</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #111827;
+            /* gray-900 */
+            background-image:
+                radial-gradient(at 0% 0%, hsla(253, 16%, 7%, 1) 0, transparent 50%),
+                radial-gradient(at 50% 0%, hsla(225, 39%, 30%, 1) 0, transparent 50%),
+                radial-gradient(at 100% 0%, hsla(339, 49%, 30%, 1) 0, transparent 50%);
+        }
+    </style>
+</head>
 
-{% block content %}
-<div class="container mx-auto px-4 py-12">
-    <div class="max-w-md mx-auto bg-white rounded-lg shadow-md overflow-hidden">
-        <div class="p-6">
-            <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">管理员登录</h2>
-            
+<body class="min-h-screen flex items-center justify-center text-white font-sans">
+
+    <div class="w-full max-w-md px-4">
+        <!-- Logo / Title Area -->
+        <div class="text-center mb-8">
+            <h1
+                class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600 inline-block">
+                👾 AI 游戏实验室
+            </h1>
+            <p class="text-gray-400 mt-2 text-sm">管理员控制台</p>
+        </div>
+
+        <!-- Login Card -->
+        <div class="bg-gray-800/50 backdrop-blur-lg border border-gray-700 rounded-2xl shadow-2xl p-8">
+            <h2 class="text-xl font-semibold text-center mb-6 text-gray-200">身份验证</h2>
+
             {% if error %}
-            <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6" role="alert">
+            <div class="bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-3 rounded-lg mb-6 text-sm text-center"
+                role="alert">
                 <p>{{ error }}</p>
             </div>
             {% endif %}
-            
+
             <form method="post" action="/admin/login">
-                <div class="mb-4">
-                    <label for="api_key" class="block text-gray-700 text-sm font-bold mb-2">管理员密钥</label>
-                    <input type="text" id="api_key" name="api_key" required 
-                           class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                    <p class="text-xs text-gray-500 mt-1">请输入: admin123</p>
+                <div class="mb-6">
+                    <label for="api_key"
+                        class="block text-gray-400 text-xs font-bold mb-2 uppercase tracking-wider">密钥</label>
+                    <input type="password" id="api_key" name="api_key" required placeholder="请输入管理员密钥"
+                        class="w-full bg-gray-900/50 border border-gray-600 text-white text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block p-3 placeholder-gray-500 transition duration-200">
                 </div>
-                <div class="flex items-center justify-between">
-                    <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition" type="submit">
-                        登录
-                    </button>
-                </div>
+
+                <button type="submit"
+                    class="w-full text-white bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 focus:ring-4 focus:outline-none focus:ring-purple-800 font-medium rounded-lg text-sm px-5 py-3 text-center transition-all duration-200 shadow-lg hover:shadow-purple-500/25">
+                    进入系统
+                </button>
             </form>
         </div>
+
+        <div class="text-center mt-6">
+            <a href="/" class="text-gray-500 hover:text-gray-300 text-sm transition duration-200">
+                ← 返回主页
+            </a>
+        </div>
     </div>
-</div>
-{% endblock %}
+
+</body>
+
+</html>

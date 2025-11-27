@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,46 +8,52 @@
     <script src="https://cdn.tailwindcss.com"></script>
     {% block head %}{% endblock %}
 </head>
+
 <body class="bg-gray-900 text-white min-h-screen font-sans m-0 p-0">
     <!-- 顶部栏 -->
-    <header class="bg-gray-800 border-b border-gray-700 py-3 px-4 flex justify-between items-center">
+    <header class="sticky top-0 z-50 bg-gray-800 border-b border-gray-700 py-3 px-4 flex justify-between items-center">
         <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600 m-0">
             👾 AI 游戏实验室
         </h1>
         <div class="flex gap-3">
-            <a href="/refresh" class="text-xs flex items-center bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded text-gray-300 transition">
+            <a href="/refresh"
+                class="text-xs flex items-center bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded text-gray-300 transition">
                 🔄 刷新库
             </a>
-            <a href="/upload" class="text-sm font-bold bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow-lg transition flex items-center gap-2">
+            <a href="/upload"
+                class="text-sm font-bold bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow-lg transition flex items-center gap-2">
                 ➕ 上传新游戏
             </a>
         </div>
     </header>
-    
+
     <div class="flex min-h-screen">
         <!-- 侧边栏 -->
         <aside class="w-28 bg-gray-800 border-r border-gray-700">
             <nav class="p-2">
                 <ul>
                     <li class="mb-4">
-                        <a href="/" class="flex items-center justify-start text-gray-300 hover:text-white hover:bg-gray-700 py-2 px-3 rounded text-sm">
+                        <a href="/"
+                            class="flex items-center justify-start text-gray-300 hover:text-white hover:bg-gray-700 py-2 px-3 rounded text-sm">
                             🏠 主页
                         </a>
                     </li>
                     <li class="mb-4">
-                        <a href="/leaderboard" class="flex items-center justify-start text-gray-300 hover:text-white hover:bg-gray-700 py-2 px-3 rounded text-sm">
+                        <a href="/leaderboard"
+                            class="flex items-center justify-start text-gray-300 hover:text-white hover:bg-gray-700 py-2 px-3 rounded text-sm">
                             🏆 周排行榜
                         </a>
                     </li>
                     <li>
-                        <a href="#" class="flex items-center justify-start text-gray-300 hover:text-white hover:bg-gray-700 py-2 px-3 rounded text-sm">
+                        <a href="#"
+                            class="flex items-center justify-start text-gray-300 hover:text-white hover:bg-gray-700 py-2 px-3 rounded text-sm">
                             ℹ️ 关于
                         </a>
                     </li>
                 </ul>
             </nav>
         </aside>
-        
+
         <!-- 内容区域 -->
         <main class="flex-1 p-2">
             {% block content %}
@@ -54,4 +61,5 @@
         </main>
     </div>
 </body>
+
 </html>
