@@ -29,7 +29,7 @@ def verify_admin_cookie(request: Request):
 @router.get("/admin/login", response_class=HTMLResponse)
 async def admin_login_page(request: Request):
     """管理员登录页面"""
-    return templates.TemplateResponse("admin_login.html", {"request": request})
+    return templates.TemplateResponse("admin/admin_login.html", {"request": request})
 
 # --- 管理员登录处理 (已修复) ---
 @router.post("/admin/login")
@@ -55,7 +55,7 @@ async def admin_login(
         return redirect_response
     else:
         return templates.TemplateResponse(
-            "admin_login.html", 
+            "admin/admin_login.html", 
             {"request": request, "error": "错误的API密钥"}
         )
 
@@ -75,7 +75,7 @@ async def admin_dashboard(
     total_ratings = sum(game.rating_count for game in games) if games else 0
     
     return templates.TemplateResponse(
-        "admin_dashboard.html", 
+        "admin/admin_dashboard.html", 
         {
             "request": request, 
             "games": games, 

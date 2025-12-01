@@ -254,8 +254,18 @@ async def get_categories(db: Session = Depends(get_db)):
     # 返回分类列表
     return [{"id": category.id, "name": category.name} for category in categories]
 
+# 从admin.py导入管理员验证函数
+from fastapi import HTTPException
+
+def verify_admin_cookie(request: Request):
+    """验证管理员cookie"""
+    cookie_value = request.cookies.get("admin_key")
+    if cookie_value != "admin123":
+        raise HTTPException(status_code=403, detail="未授权访问")
+    return True
+
 @router.get("/ai_navigation/admin", response_class=HTMLResponse)
-async def ai_navigation_admin(request: Request, db: Session = Depends(get_db)):
+async def ai_navigation_admin(request: Request, db: Session = Depends(get_db), _: bool = Depends(verify_admin_cookie)):
     """AI导航管理页面"""
     try:
         # 初始化默认分类
@@ -267,7 +277,28 @@ async def ai_navigation_admin(request: Request, db: Session = Depends(get_db)):
         # 从数据库获取所有AI功能
         ai_features = db.query(AIFeature).all()
         
-        return templates.TemplateResponse("ai_navigation_admin.html", {
+        return templates.TemplateResponse("admin/ai_navigation_admin.html", {
+            "request": request, 
+            "categories": categories,
+            "ai_features": ai_features
+        })
+    except Exception as e:
+        return f"<h1>错误</h1><p>{str(e)}</p>"
+
+@router.get("/admin/ai_navigation", response_class=HTMLResponse)
+async def admin_ai_navigation(request: Request, db: Session = Depends(get_db), _: bool = Depends(verify_admin_cookie)):
+    """AI导航管理页面（从admin路由访问）"""
+    try:
+        # 初始化默认分类
+        await init_default_categories(db)
+        
+        # 从数据库获取所有分类
+        categories = db.query(AICategory).all()
+        
+        # 从数据库获取所有AI功能
+        ai_features = db.query(AIFeature).all()
+        
+        return templates.TemplateResponse("admin/ai_navigation_admin.html", {
             "request": request, 
             "categories": categories,
             "ai_features": ai_features
@@ -276,7 +307,7 @@ async def ai_navigation_admin(request: Request, db: Session = Depends(get_db)):
         return f"<h1>错误</h1><p>{str(e)}</p>"
 
 @router.get("/ai_navigation/get_feature/{feature_id}")
-async def get_feature(feature_id: int, db: Session = Depends(get_db)):
+async def get_feature(feature_id: int, db: Session = Depends(get_db), _: bool = Depends(verify_admin_cookie)):
     """获取AI功能详情"""
     feature = db.query(AIFeature).filter(AIFeature.id == feature_id).first()
     if not feature:
@@ -299,7 +330,8 @@ async def update_feature(
     company_name: str = Form(...),
     category_id: int = Form(...),
     description: str = Form(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_admin_cookie)
 ):
     """更新AI功能"""
     # 检查AI功能是否存在
@@ -335,7 +367,7 @@ async def update_feature(
     return JSONResponse({"success": True, "message": "AI功能已成功更新"})
 
 @router.post("/ai_navigation/delete_feature/{feature_id}")
-async def delete_feature(feature_id: int, db: Session = Depends(get_db)):
+async def delete_feature(feature_id: int, db: Session = Depends(get_db), _: bool = Depends(verify_admin_cookie)):
     """删除AI功能"""
     # 检查AI功能是否存在
     feature = db.query(AIFeature).filter(AIFeature.id == feature_id).first()
