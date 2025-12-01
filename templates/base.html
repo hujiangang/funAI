@@ -12,9 +12,29 @@
 <body class="bg-gray-900 text-white min-h-screen font-sans m-0 p-0">
     <!-- 顶部栏 - 还原高度 -->
     <header class="sticky top-0 z-50 bg-gray-800 border-b border-gray-700 py-3 px-4 flex justify-between items-center">
-        <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600 m-0">
+        <h1 id="admin-toggle" class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600 m-0">
             👾 AI 游戏实验室
         </h1>
+        <script>
+            // 点击3次切换到管理登录页面
+            let clickCount = 0;
+            const adminToggle = document.getElementById('admin-toggle');
+            if (adminToggle) {
+                adminToggle.addEventListener('click', () => {
+                    clickCount++;
+                    if (clickCount === 3) {
+                        window.location.href = '/admin/login';
+                        clickCount = 0;
+                    }
+                    // 3秒后重置点击计数
+                    setTimeout(() => {
+                        if (clickCount < 3) {
+                            clickCount = 0;
+                        }
+                    }, 3000);
+                });
+            }
+        </script>
         <div class="flex gap-3">
             {% if request.url.path == '/ai_navigation' %}
                 <!-- AI导航页面的按钮 -->
