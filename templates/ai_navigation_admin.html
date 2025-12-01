@@ -1,0 +1,292 @@
+{% extends "base.html" %}
+
+{% block title %}AI导航管理{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold text-white mb-8">AI导航管理</h1>
+    
+    <!-- 分类管理 -->
+    <section class="mb-12 bg-gray-800 rounded-lg p-6 border border-gray-700">
+        <h2 class="text-2xl font-bold text-white mb-6">分类管理</h2>
+        
+        <!-- 添加分类 -->
+        <div class="mb-8">
+            <h3 class="text-xl font-semibold text-white mb-3">添加新分类</h3>
+            <form id="add-category-form" class="flex gap-3">
+                <input type="text" id="category-name" placeholder="输入分类名称" 
+                       class="flex-1 px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                <button type="submit" 
+                        class="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors">
+                    添加分类
+                </button>
+            </form>
+        </div>
+        
+        <!-- 分类列表 -->
+        <div>
+            <h3 class="text-xl font-semibold text-white mb-3">现有分类</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {% for category in categories %}
+                <div class="bg-gray-750 rounded-lg p-4 border border-gray-700 flex justify-between items-center">
+                    <span class="text-white">{{ category.name }}</span>
+                    <button class="delete-category-btn text-red-400 hover:text-red-300 transition-colors" 
+                            data-category-id="{{ category.id }}">
+                        删除
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+    
+    <!-- AI功能管理 -->
+    <section class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+        <h2 class="text-2xl font-bold text-white mb-6">AI功能管理</h2>
+        
+        <!-- AI功能列表 -->
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead>
+                    <tr class="border-b border-gray-700">
+                        <th class="py-3 px-4 text-gray-400 font-medium">标题</th>
+                        <th class="py-3 px-4 text-gray-400 font-medium">公司</th>
+                        <th class="py-3 px-4 text-gray-400 font-medium">URL</th>
+                        <th class="py-3 px-4 text-gray-400 font-medium">分类</th>
+                        <th class="py-3 px-4 text-gray-400 font-medium">描述</th>
+                        <th class="py-3 px-4 text-gray-400 font-medium">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for feature in ai_features %}
+                    <tr class="border-b border-gray-700 hover:bg-gray-750 transition-colors">
+                        <td class="py-3 px-4 text-white">{{ feature.title }}</td>
+                        <td class="py-3 px-4 text-gray-300">{{ feature.company_name }}</td>
+                        <td class="py-3 px-4 text-blue-400 hover:underline"><a href="{{ feature.url }}" target="_blank">{{ feature.url }}</a></td>
+                        <td class="py-3 px-4 text-gray-300">
+                            {% for category in categories %}
+                                {% if category.id == feature.category_id %}
+                                    {{ category.name }}
+                                {% endif %}
+                            {% endfor %}
+                        </td>
+                        <td class="py-3 px-4 text-gray-300 max-w-xs truncate">{{ feature.description }}</td>
+                        <td class="py-3 px-4">
+                            <div class="flex gap-2">
+                                <button class="edit-feature-btn text-blue-400 hover:text-blue-300 transition-colors" 
+                                        data-feature-id="{{ feature.id }}">
+                                    编辑
+                                </button>
+                                <button class="delete-feature-btn text-red-400 hover:text-red-300 transition-colors" 
+                                        data-feature-id="{{ feature.id }}">
+                                    删除
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+    
+    <!-- 编辑AI功能模态框 -->
+    <div id="edit-feature-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-gray-800 rounded-lg p-6 w-full max-w-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-white">编辑AI功能</h3>
+                <button id="close-modal-btn" class="text-gray-400 hover:text-white transition-colors">
+                    ×
+                </button>
+            </div>
+            <form id="edit-feature-form">
+                <input type="hidden" id="edit-feature-id">
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <label class="block text-gray-300 mb-2">标题</label>
+                        <input type="text" id="edit-title" 
+                               class="w-full px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    </div>
+                    <div>
+                        <label class="block text-gray-300 mb-2">URL</label>
+                        <input type="url" id="edit-url" 
+                               class="w-full px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <label class="block text-gray-300 mb-2">公司名称</label>
+                        <input type="text" id="edit-company-name" 
+                               class="w-full px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    </div>
+                    <div>
+                        <label class="block text-gray-300 mb-2">分类</label>
+                        <select id="edit-category-id" 
+                                class="w-full px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                            {% for category in categories %}
+                            <option value="{{ category.id }}">{{ category.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="mb-6">
+                    <label class="block text-gray-300 mb-2">描述</label>
+                    <textarea id="edit-description" rows="3" 
+                              class="w-full px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500"></textarea>
+                </div>
+                
+                <div class="flex justify-end gap-3">
+                    <button type="button" id="cancel-edit-btn" 
+                            class="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors">
+                        取消
+                    </button>
+                    <button type="submit" 
+                            class="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors">
+                        保存修改
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 添加分类
+    document.getElementById('add-category-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('category-name').value.trim();
+        if (!name) return;
+        
+        const response = await fetch('/ai_navigation/add_category', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: new URLSearchParams({ name })
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            location.reload();
+        } else {
+            alert(result.message);
+        }
+    });
+    
+    // 删除分类
+    document.querySelectorAll('.delete-category-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const categoryId = btn.dataset.categoryId;
+            if (confirm('确定要删除这个分类吗？')) {
+                const response = await fetch(`/ai_navigation/delete_category/${categoryId}`, {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    location.reload();
+                } else {
+                    alert(result.message);
+                }
+            }
+        });
+    });
+    
+    // 编辑AI功能
+    const modal = document.getElementById('edit-feature-modal');
+    const editForm = document.getElementById('edit-feature-form');
+    
+    document.querySelectorAll('.edit-feature-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const featureId = btn.dataset.featureId;
+            
+            // 获取AI功能详情
+            const response = await fetch(`/ai_navigation/get_feature/${featureId}`);
+            const feature = await response.json();
+            
+            // 填充表单
+            document.getElementById('edit-feature-id').value = feature.id;
+            document.getElementById('edit-title').value = feature.title;
+            document.getElementById('edit-url').value = feature.url;
+            document.getElementById('edit-company-name').value = feature.company_name;
+            document.getElementById('edit-category-id').value = feature.category_id;
+            document.getElementById('edit-description').value = feature.description;
+            
+            // 显示模态框
+            modal.classList.remove('hidden');
+        });
+    });
+    
+    // 关闭模态框
+    document.getElementById('close-modal-btn').addEventListener('click', () => {
+        modal.classList.add('hidden');
+    });
+    
+    document.getElementById('cancel-edit-btn').addEventListener('click', () => {
+        modal.classList.add('hidden');
+    });
+    
+    // 点击模态框外部关闭
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.classList.add('hidden');
+        }
+    });
+    
+    // 保存编辑
+    editForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const featureId = document.getElementById('edit-feature-id').value;
+        const title = document.getElementById('edit-title').value;
+        const url = document.getElementById('edit-url').value;
+        const companyName = document.getElementById('edit-company-name').value;
+        const categoryId = document.getElementById('edit-category-id').value;
+        const description = document.getElementById('edit-description').value;
+        
+        const response = await fetch(`/ai_navigation/update_feature/${featureId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: new URLSearchParams({
+                title,
+                url,
+                company_name: companyName,
+                category_id: categoryId,
+                description
+            })
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            modal.classList.add('hidden');
+            location.reload();
+        } else {
+            alert(result.message);
+        }
+    });
+    
+    // 删除AI功能
+    document.querySelectorAll('.delete-feature-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const featureId = btn.dataset.featureId;
+            if (confirm('确定要删除这个AI功能吗？')) {
+                const response = await fetch(`/ai_navigation/delete_feature/${featureId}`, {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    location.reload();
+                } else {
+                    alert(result.message);
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

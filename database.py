@@ -42,6 +42,25 @@ class Game(Base):
     views = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+# AI分类模型
+class AICategory(Base):
+    __tablename__ = "ai_categories"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+# AI功能模型
+class AIFeature(Base):
+    __tablename__ = "ai_features"
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, unique=True, index=True)
+    url = Column(String)
+    description = Column(Text)
+    category_id = Column(Integer)
+    company_name = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    is_approved = Column(Integer, default=1)  # 0=待审核, 1=已通过, 2=已拒绝，默认直接通过
+
 # 确保数据库表在模块导入时被创建
 Base.metadata.create_all(bind=engine)
 
