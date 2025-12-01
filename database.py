@@ -9,7 +9,14 @@ engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# 更新后的模型：增加了 ai_model, prompt, author
+# 分类模型
+class Category(Base):
+    __tablename__ = "categories"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+# 更新后的模型：增加了 ai_model, prompt, author, category
 class Game(Base):
     __tablename__ = "games"
     id = Column(Integer, primary_key=True, index=True)
@@ -22,6 +29,12 @@ class Game(Base):
     author = Column(String, default="匿名玩家")
     ai_model = Column(String, default="Unknown") # 例如 GPT-4o
     prompt = Column(Text, default="")            # 提示词
+    category_id = Column(Integer, default=1)      # 分类ID，默认1（游戏）
+    
+    # 多文件游戏支持
+    is_multi_file = Column(Integer, default=0)   # 0=单文件, 1=多文件(zip)
+    directory_name = Column(String, default="")  # 多文件游戏的目录名
+    edit_password = Column(String, default="")   # 编辑密码
     
     rating = Column(Float, default=0)            # 综合平均分
     rating_total = Column(Integer, default=0)    # 总评分

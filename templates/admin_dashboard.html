@@ -32,6 +32,45 @@
         </div>
     </div>
 
+    <!-- 分类管理 -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">分类管理</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- 添加分类 -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-600 mb-3">添加新分类</h3>
+                <form action="/admin/add_category" method="post">
+                    <div class="flex space-x-2">
+                        <input type="text" name="name" placeholder="分类名称" required class="flex-1 px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition">
+                            添加
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <!-- 分类列表 -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-600 mb-3">现有分类</h3>
+                <div class="space-y-2">
+                    {% for category in categories %}
+                    <div class="flex justify-between items-center p-3 bg-gray-50 rounded">
+                        <span class="text-gray-800">{{ category.name }}</span>
+                        <div class="flex space-x-2">
+                            {% if category.id != 1 %}
+                            <form action="/admin/delete_category/{{ category.id }}" method="post" onsubmit="return confirm('确定要删除这个分类吗？该分类下的游戏将被归到默认分类。');">
+                                <button type="submit" class="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700 transition">
+                                    删除
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 游戏列表 -->
     <div class="bg-white rounded-lg shadow-md overflow-hidden">
         <div class="overflow-x-auto">

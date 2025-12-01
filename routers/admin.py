@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 import secrets
 
 # 从父级目录导入数据库和工具函数
-from database import get_db, Game
+from database import get_db, Game, Category
 from utils import sync_games_from_folder
 
 router = APIRouter()
@@ -68,6 +68,7 @@ async def admin_dashboard(
 ):
     """管理员仪表盘"""
     games = db.query(Game).all()
+    categories = db.query(Category).all()
     total_games = len(games)
     # 处理空列表的情况，防止 sum 报错（虽然 sum 空列表是 0，但为了健壮性）
     total_views = sum(game.views for game in games) if games else 0
@@ -78,6 +79,7 @@ async def admin_dashboard(
         {
             "request": request, 
             "games": games, 
+            "categories": categories,
             "total_games": total_games, 
             "total_views": total_views, 
             "total_ratings": total_ratings
@@ -124,6 +126,52 @@ async def admin_logout():
     
     # 3. 返回对象
     return response
+
+# --- 添加分类 ---
+@router.post("/admin/add_category")
+async def add_category(
+    name: str = Form(...),
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_admin_cookie)
+):
+    """添加新分类"""
+    # 检查分类是否已存在
+    existing_category = db.query(Category).filter(Category.name == name).first()
+    if existing_category:
+        return RedirectResponse(url="/admin/dashboard", status_code=303)
+    
+    # 创建新分类
+    new_category = Category(name=name)
+    db.add(new_category)
+    db.commit()
+    
+    return RedirectResponse(url="/admin/dashboard", status_code=303)
+
+# --- 删除分类 ---
+@router.post("/admin/delete_category/{category_id}")
+async def delete_category(
+    category_id: int,
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_admin_cookie)
+):
+    """删除分类，将该分类下的游戏默认归到游戏分类"""
+    # 不能删除默认分类
+    if category_id == 1:
+        return RedirectResponse(url="/admin/dashboard", status_code=303)
+    
+    # 查找分类
+    category = db.query(Category).filter(Category.id == category_id).first()
+    if not category:
+        return RedirectResponse(url="/admin/dashboard", status_code=303)
+    
+    # 将该分类下的游戏默认归到游戏分类（ID=1）
+    db.query(Game).filter(Game.category_id == category_id).update({"category_id": 1})
+    
+    # 删除分类
+    db.delete(category)
+    db.commit()
+    
+    return RedirectResponse(url="/admin/dashboard", status_code=303)
 
 # --- 刷新游戏库 ---
 @router.get("/admin/refresh")

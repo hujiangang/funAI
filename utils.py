@@ -33,7 +33,7 @@ def sync_games_from_folder():
                 # 如果没有 <title> 标签，再用文件名作为备选方案
                 title = filename.replace(".html", "").replace("_", " ").title()
 
-            new_game = Game(title=title, description="暂无介绍", filename=filename, html_code=content)
+            new_game = Game(title=title, description="暂无介绍", filename=filename, html_code=content, category_id=1)
             db.add(new_game)
         else:
             # 游戏已存在，仅当文件内容有变化时才更新数据库中的 html_code

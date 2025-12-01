@@ -10,7 +10,7 @@
 </head>
 
 <body class="bg-gray-900 text-white min-h-screen font-sans m-0 p-0">
-    <!-- 顶部栏 -->
+    <!-- 顶部栏 - 还原高度 -->
     <header class="sticky top-0 z-50 bg-gray-800 border-b border-gray-700 py-3 px-4 flex justify-between items-center">
         <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600 m-0">
             👾 AI 游戏实验室
@@ -28,8 +28,8 @@
     </header>
 
     <div class="flex min-h-screen">
-        <!-- 侧边栏 -->
-        <aside class="w-28 bg-gray-800 border-r border-gray-700">
+        <!-- 侧边栏 - 固定定位，左对齐 -->
+        <aside class="w-24 bg-gray-800 border-r border-gray-700 fixed h-full">
             <nav class="p-2">
                 <ul>
                     <li class="mb-4">
@@ -54,8 +54,8 @@
             </nav>
         </aside>
 
-        <!-- 内容区域 -->
-        <main class="flex-1 p-2">
+        <!-- 内容区域 - 减少左侧边距 -->
+        <main class="flex-1 ml-20 p-8">
             {% block content %}
             {% endblock %}
         </main>

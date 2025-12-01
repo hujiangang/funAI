@@ -5,8 +5,26 @@
 {% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- 分类二级页签 - 固定在顶部 -->
+    <div class="fixed top-[3.75rem] left-[7rem] right-[2rem] z-50 bg-gray-900 pt-0 pb-0 shadow-lg border-b border-gray-700">
+        <div class="flex space-x-1 overflow-x-auto">
+            <!-- 游戏分类（原全部） -->
+            <a href="/" class="px-4 py-2 whitespace-nowrap transition-all duration-300 border-b-2 {% if not selected_category %}border-purple-500 text-purple-400{% else %}border-transparent text-gray-400 hover:text-gray-300{% endif %}">
+                🎮 游戏
+            </a>
+            <!-- 分类列表 - 排除默认的"游戏"分类 -->
+            {% for category in categories %}
+            {% if category.name != "游戏" %}
+            <a href="/?category_id={{ category.id }}" class="px-4 py-2 whitespace-nowrap transition-all duration-300 border-b-2 {% if selected_category == category.id %}border-purple-500 text-purple-400{% else %}border-transparent text-gray-400 hover:text-gray-300{% endif %}">
+                {{ category.name }}
+            </a>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- 游戏列表 - 增加顶部间距，避免被分类栏遮挡 -->
+    <div class="pt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {% for game in games %}
         <a href="/play/{{ game.id }}" class="group bg-gray-800 rounded-xl overflow-hidden border border-gray-700 hover:border-purple-500 hover:shadow-2xl hover:shadow-purple-500/20 transition-all duration-300">
             <div class="h-40 bg-gradient-to-br from-indigo-900 to-gray-900 flex items-center justify-center text-5xl group-hover:scale-110 transition-transform">
@@ -37,4 +55,31 @@
         {% endif %}
     </div>
 </div>
+
+<!-- 下拉刷新功能 -->
+<script>
+    // 下拉刷新功能
+    let startY = 0;
+    let isRefreshing = false;
+    
+    document.addEventListener('touchstart', (e) => {
+        if (window.scrollY === 0) {
+            startY = e.touches[0].clientY;
+        }
+    });
+    
+    document.addEventListener('touchmove', (e) => {
+        if (window.scrollY === 0 && e.touches[0].clientY > startY + 50 && !isRefreshing) {
+            isRefreshing = true;
+            window.location.reload();
+        }
+    });
+    
+    // 滚动到底部自动加载更多（如果需要）
+    window.addEventListener('scroll', () => {
+        if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 100) {
+            // 这里可以添加加载更多逻辑
+        }
+    });
+</script>
 {% endblock %}
