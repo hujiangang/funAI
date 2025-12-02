@@ -34,15 +34,22 @@ def find_build_output_dir(directory: str) -> str:
     return None
 
 @router.get("/", response_class=HTMLResponse)
-async def index(request: Request, category_id: int = None, db: Session = Depends(get_db)):
+async def index(request: Request, category_id: int = None, page: int = 1, db: Session = Depends(get_db)):
     # 获取所有分类
     categories = db.query(Category).all()
     
+    # 每页显示的游戏数量
+    per_page = 12
+    offset = (page - 1) * per_page
+    
     # 根据分类筛选游戏
+    query = db.query(Game)
     if category_id:
-        games = db.query(Game).filter(Game.category_id == category_id).order_by(Game.views.desc()).all()
-    else:
-        games = db.query(Game).order_by(Game.views.desc()).all()
+        query = query.filter(Game.category_id == category_id)
+    
+    # 获取总数和分页数据
+    total_games = query.count()
+    games = query.order_by(Game.views.desc()).offset(offset).limit(per_page).all()
     
     return templates.TemplateResponse(
         "index.html", 
@@ -50,9 +57,46 @@ async def index(request: Request, category_id: int = None, db: Session = Depends
             "request": request, 
             "games": games,
             "categories": categories,
-            "selected_category": category_id
+            "selected_category": category_id,
+            "current_page": page,
+            "total_pages": (total_games + per_page - 1) // per_page
         }
     )
+
+@router.get("/api/games")
+async def get_games(category_id: int = None, page: int = 1, db: Session = Depends(get_db)):
+    """API端点：获取游戏列表，支持分页和分类筛选"""
+    # 每页显示的游戏数量
+    per_page = 12
+    offset = (page - 1) * per_page
+    
+    # 根据分类筛选游戏
+    query = db.query(Game)
+    if category_id:
+        query = query.filter(Game.category_id == category_id)
+    
+    # 获取总数和分页数据
+    total_games = query.count()
+    games = query.order_by(Game.views.desc()).offset(offset).limit(per_page).all()
+    
+    # 转换为字典列表，方便JSON序列化
+    games_data = []
+    for game in games:
+        games_data.append({
+            "id": game.id,
+            "title": game.title,
+            "author": game.author,
+            "ai_model": game.ai_model,
+            "description": game.description,
+            "views": game.views,
+            "rating": game.rating
+        })
+    
+    return {
+        "games": games_data,
+        "total_pages": (total_games + per_page - 1) // per_page,
+        "current_page": page
+    }
 
 @router.get("/play/{game_id}", response_class=HTMLResponse)
 async def play(request: Request, game_id: int, db: Session = Depends(get_db)):

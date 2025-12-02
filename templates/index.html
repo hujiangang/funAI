@@ -24,7 +24,10 @@
     </div>
 
     <!-- 游戏列表 - 增加顶部间距，避免被分类栏遮挡 -->
-    <div class="pt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div id="games-container" 
+         class="pt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+         data-total-pages="{{ total_pages }}"
+         data-selected-category="{{ selected_category if selected_category is not none else '' }}">
         {% for game in games %}
         <a href="/play/{{ game.id }}" class="group bg-gray-800 rounded-xl overflow-hidden border border-gray-700 hover:border-purple-500 hover:shadow-2xl hover:shadow-purple-500/20 transition-all duration-300">
             <div class="h-40 bg-gradient-to-br from-indigo-900 to-gray-900 flex items-center justify-center text-5xl group-hover:scale-110 transition-transform">
@@ -46,18 +49,48 @@
             </div>
         </a>
         {% endfor %}
-
-        {% if not games %}
-        <div class="col-span-full text-center py-12 text-gray-500">
-            <p class="text-xl">暂无游戏</p>
-            <p class="text-sm mt-2">点击右上角的"上传新游戏"来添加第一个游戏吧！</p>
-        </div>
-        {% endif %}
     </div>
+    
+    <!-- 加载更多指示器 -->
+    <div id="load-more" class="col-span-full text-center py-8 text-gray-500">
+        <div class="flex items-center justify-center gap-2">
+            <div class="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+            <span>加载中...</span>
+        </div>
+    </div>
+    
+    <!-- 没有更多游戏的提示 -->
+    <div id="no-more" class="col-span-full text-center py-8 text-gray-500 hidden">
+        <p>没有更多游戏了</p>
+    </div>
+    
+    {% if not games %}
+    <div class="col-span-full text-center py-12 text-gray-500">
+        <p class="text-xl">暂无游戏</p>
+        <p class="text-sm mt-2">点击右上角的"上传新游戏"来添加第一个游戏吧！</p>
+    </div>
+    {% endif %}
 </div>
 
-<!-- 下拉刷新功能 -->
+<!-- 下拉刷新和无限滚动功能 -->
 <script>
+    // 从data属性中获取初始值，避免直接使用模板变量导致的IDE报红
+    const gamesContainer = document.getElementById('games-container');
+    const totalPages = parseInt(gamesContainer.dataset.totalPages) || 1;
+    const selectedCategoryStr = gamesContainer.dataset.selectedCategory;
+    const selectedCategory = selectedCategoryStr ? parseInt(selectedCategoryStr) : null;
+    
+    // 全局变量
+    let currentPage = 2;
+    let isLoading = false;
+    let hasMore = currentPage <= totalPages;
+    
+    // 初始化：如果没有更多游戏，隐藏加载指示器
+    if (!hasMore) {
+        document.getElementById('load-more').classList.add('hidden');
+        document.getElementById('no-more').classList.remove('hidden');
+    }
+    
     // 下拉刷新功能
     let startY = 0;
     let isRefreshing = false;
@@ -75,11 +108,93 @@
         }
     });
     
-    // 滚动到底部自动加载更多（如果需要）
+    // 加载更多游戏的函数
+    async function loadMoreGames() {
+        if (isLoading || !hasMore) return;
+        
+        isLoading = true;
+        
+        try {
+            // 构建请求URL
+            let url = `/api/games?page=${currentPage}`;
+            if (selectedCategory) {
+                url += `&category_id=${selectedCategory}`;
+            }
+            
+            // 发送请求
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            // 更新状态
+            currentPage = data.current_page + 1;
+            hasMore = currentPage <= data.total_pages;
+            
+            // 渲染新游戏
+            const gamesContainer = document.getElementById('games-container');
+            data.games.forEach(game => {
+                const gameElement = document.createElement('a');
+                gameElement.href = `/play/${game.id}`;
+                gameElement.className = 'group bg-gray-800 rounded-xl overflow-hidden border border-gray-700 hover:border-purple-500 hover:shadow-2xl hover:shadow-purple-500/20 transition-all duration-300';
+                
+                // 生成星级评分
+                const stars = '⭐'.repeat(Math.floor(game.rating));
+                
+                gameElement.innerHTML = `
+                    <div class="h-40 bg-gradient-to-br from-indigo-900 to-gray-900 flex items-center justify-center text-5xl group-hover:scale-110 transition-transform">
+                        🎮
+                    </div>
+                    <div class="p-5">
+                        <h3 class="text-xl font-bold mb-2 group-hover:text-purple-400 transition">${game.title}</h3>
+                        <div class="flex items-center gap-4 text-xs text-gray-400 mb-3">
+                            <span>👤 ${game.author}</span>
+                            <span class="bg-gray-700 px-1.5 py-0.5 rounded text-[10px]">🤖 ${game.ai_model}</span>
+                            <span class="text-yellow-400">${stars}</span>
+                        </div>
+                        <div class="flex justify-between items-center text-xs text-gray-500 border-t border-gray-700 pt-2">
+                            <span class="line-clamp-1">
+                                ${game.description || '暂无简介'}
+                            </span>
+                            <span class="bg-gray-700 text-white px-2 py-0.5 rounded">热度: ${game.views}</span>
+                        </div>
+                    </div>
+                `;
+                
+                gamesContainer.appendChild(gameElement);
+            });
+            
+            // 更新加载状态
+            if (!hasMore) {
+                document.getElementById('load-more').classList.add('hidden');
+                document.getElementById('no-more').classList.remove('hidden');
+            }
+        } catch (error) {
+            console.error('加载游戏失败:', error);
+        } finally {
+            isLoading = false;
+        }
+    }
+    
+    // 滚动到底部自动加载更多
     window.addEventListener('scroll', () => {
         if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 100) {
-            // 这里可以添加加载更多逻辑
+            loadMoreGames();
         }
+    });
+    
+    // 监听分类切换，重置懒加载状态
+    document.querySelectorAll('.space-x-1 a').forEach(link => {
+        link.addEventListener('click', (e) => {
+            // 保存当前分类，用于后续请求
+            const href = e.currentTarget.href;
+            const url = new URL(href);
+            const categoryParam = url.searchParams.get('category_id');
+            selectedCategory = categoryParam ? parseInt(categoryParam) : null;
+            
+            // 重置状态
+            currentPage = 2;
+            isLoading = false;
+            hasMore = true;
+        });
     });
 </script>
 {% endblock %}
