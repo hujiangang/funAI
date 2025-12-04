@@ -42,10 +42,12 @@ async def index(request: Request, category_id: int = None, page: int = 1, db: Se
     per_page = 12
     offset = (page - 1) * per_page
     
+    # 如果没有提供分类ID，默认使用游戏分类（ID=1）
+    if not category_id:
+        category_id = 1
+    
     # 根据分类筛选游戏
-    query = db.query(Game)
-    if category_id:
-        query = query.filter(Game.category_id == category_id)
+    query = db.query(Game).filter(Game.category_id == category_id)
     
     # 获取总数和分页数据
     total_games = query.count()
@@ -70,10 +72,12 @@ async def get_games(category_id: int = None, page: int = 1, db: Session = Depend
     per_page = 12
     offset = (page - 1) * per_page
     
+    # 如果没有提供分类ID，默认使用游戏分类（ID=1）
+    if not category_id:
+        category_id = 1
+    
     # 根据分类筛选游戏
-    query = db.query(Game)
-    if category_id:
-        query = query.filter(Game.category_id == category_id)
+    query = db.query(Game).filter(Game.category_id == category_id)
     
     # 获取总数和分页数据
     total_games = query.count()
