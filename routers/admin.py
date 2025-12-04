@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 import secrets
 
 # 从父级目录导入数据库和工具函数
-from database import get_db, Game, Category
+from database import get_db, Game, Category, AboutConfig
 from utils import sync_games_from_folder
 
 router = APIRouter()
@@ -146,6 +146,36 @@ async def add_category(
     db.commit()
     
     return RedirectResponse(url="/admin/dashboard", status_code=303)
+
+# --- 关于页面管理 ---
+@router.get("/admin/about", response_class=HTMLResponse)
+async def admin_about(
+    request: Request,
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_admin_cookie)
+):
+    """关于页面管理"""
+    # 获取关于页面配置
+    about_config = db.query(AboutConfig).first()
+    if not about_config:
+        # 如果没有配置，创建默认配置
+        about_config = AboutConfig(
+            purpose="这是一个AI游戏实验室，旨在探索AI技术在游戏开发中的应用。",
+            reward_enabled=1,
+            reward_image_url="",
+            reward_description="感谢您的支持！"
+        )
+        db.add(about_config)
+        db.commit()
+        db.refresh(about_config)
+    
+    return templates.TemplateResponse(
+        "admin/admin_about.html",
+        {
+            "request": request,
+            "about_config": about_config
+        }
+    )
 
 # --- 删除分类 ---
 @router.post("/admin/delete_category/{category_id}")

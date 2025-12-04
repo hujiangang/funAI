@@ -61,6 +61,24 @@ class AIFeature(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     is_approved = Column(Integer, default=1)  # 0=待审核, 1=已通过, 2=已拒绝，默认直接通过
 
+# 关于页面配置模型
+class AboutConfig(Base):
+    __tablename__ = "about_config"
+    id = Column(Integer, primary_key=True, index=True)
+    purpose = Column(Text, default="")  # 设计初衷
+    reward_enabled = Column(Integer, default=1)  # 打赏开关：0=关闭, 1=开启
+    reward_image_url = Column(String, default="")  # 打赏图片URL
+    reward_description = Column(String, default="感谢您的支持！")  # 打赏描述
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+# 点赞模型
+class Like(Base):
+    __tablename__ = "likes"
+    id = Column(Integer, primary_key=True, index=True)
+    ip_address = Column(String, index=True)  # 用户IP地址，用于防刷
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 # 确保数据库表在模块导入时被创建
 Base.metadata.create_all(bind=engine)
 

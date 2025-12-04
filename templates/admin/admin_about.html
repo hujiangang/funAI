@@ -1,0 +1,201 @@
+{% extends "admin/admin_base.html" %}
+
+{% block title %}
+    关于页面管理
+{% endblock %}
+
+{% block admin_content %}
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-8 text-purple-400">关于页面管理</h1>
+        
+        <!-- 关于页面配置表单 -->
+        <div class="bg-gray-800 rounded-xl p-8 shadow-lg">
+            <h2 class="text-2xl font-bold mb-6 text-gray-300">配置关于页面</h2>
+            
+            <form id="about-config-form" class="space-y-6" enctype="multipart/form-data">
+                <!-- 设计初衷 -->
+                <div>
+                    <label for="purpose" class="block text-gray-300 font-bold mb-2">设计初衷</label>
+                    <textarea 
+                        id="purpose" 
+                        name="purpose" 
+                        rows="6" 
+                        class="w-full bg-gray-700 text-white rounded-lg p-4 border border-gray-600 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+                        placeholder="请输入网站设计初衷..."
+                    >{{ about_config.purpose }}</textarea>
+                </div>
+                
+                <!-- 打赏开关 -->
+                <div class="flex items-center gap-4">
+                    <div class="flex-1">
+                        <label for="reward_enabled" class="block text-gray-300 font-bold mb-2">打赏功能</label>
+                        <p class="text-gray-500 text-sm">开启后，关于页面将显示打赏按钮</p>
+                    </div>
+                    <div class="flex items-center">
+                        <input 
+                            type="checkbox" 
+                            id="reward_enabled" 
+                            name="reward_enabled" 
+                            {% if about_config.reward_enabled %}checked{% endif %} 
+                            class="w-6 h-6 text-purple-600 bg-gray-700 border-gray-600 rounded focus:ring-2 focus:ring-purple-500 transition-all"
+                        >
+                    </div>
+                </div>
+                
+                <!-- 打赏图片 -->
+                <div>
+                    <label class="block text-gray-300 font-bold mb-2">打赏图片</label>
+                    
+                    <!-- 图片预览 -->
+                    {% if about_config.reward_image_url %}
+                    <div class="mb-3">
+                        <img src="{{ about_config.reward_image_url }}" alt="打赏图片预览" class="max-w-full h-auto max-h-40 rounded-lg border border-gray-600">
+                    </div>
+                    {% endif %}
+                    
+                    <!-- 文件上传 -->
+                    <div class="mb-3">
+                        <label for="reward_image_upload" class="block text-gray-400 font-medium mb-2">上传图片</label>
+                        <input 
+                            type="file" 
+                            id="reward_image_upload" 
+                            name="reward_image_upload" 
+                            accept="image/*" 
+                            class="w-full bg-gray-700 text-white rounded-lg p-3 border border-gray-600 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+                        >
+                        <p class="text-gray-500 text-xs mt-1">支持 JPG、PNG、GIF 等图片格式</p>
+                    </div>
+                    
+                    <!-- URL输入（备用） -->
+                    <div>
+                        <label for="reward_image_url" class="block text-gray-400 font-medium mb-2">或输入图片URL</label>
+                        <input 
+                            type="text" 
+                            id="reward_image_url" 
+                            name="reward_image_url" 
+                            value="{{ about_config.reward_image_url }}" 
+                            class="w-full bg-gray-700 text-white rounded-lg p-4 border border-gray-600 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+                            placeholder="请输入打赏图片的URL..."
+                        >
+                    </div>
+                </div>
+                
+                <!-- 打赏描述 -->
+                <div>
+                    <label for="reward_description" class="block text-gray-300 font-bold mb-2">打赏描述</label>
+                    <input 
+                        type="text" 
+                        id="reward_description" 
+                        name="reward_description" 
+                        value="{{ about_config.reward_description }}" 
+                        class="w-full bg-gray-700 text-white rounded-lg p-4 border border-gray-600 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+                        placeholder="请输入打赏描述..."
+                    >
+                </div>
+                
+                <!-- 提交按钮 -->
+                <div class="flex justify-end gap-4">
+                    <button 
+                        type="reset" 
+                        class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105"
+                    >
+                        重置
+                    </button>
+                    <button 
+                        type="submit" 
+                        class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 flex items-center gap-2"
+                    >
+                        <span>保存配置</span>
+                        <span id="save-spinner" class="hidden">⏳</span>
+                    </button>
+                </div>
+            </form>
+            
+            <!-- 成功提示 -->
+            <div id="success-message" class="mt-6 bg-green-900 bg-opacity-50 border border-green-500 text-green-400 px-6 py-3 rounded-lg hidden">
+                配置保存成功！
+            </div>
+        </div>
+    </div>
+    
+    <!-- JavaScript -->
+    <script>
+        // 保存配置功能
+        const form = document.getElementById('about-config-form');
+        const successMessage = document.getElementById('success-message');
+        const saveSpinner = document.getElementById('save-spinner');
+        
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // 显示加载状态
+            saveSpinner.classList.remove('hidden');
+            
+            // 获取表单数据
+            const formData = new FormData(form);
+            const purpose = formData.get('purpose');
+            const rewardEnabled = formData.get('reward_enabled') ? 1 : 0;
+            const rewardImageUrl = formData.get('reward_image_url');
+            const rewardDescription = formData.get('reward_description');
+            const rewardImageUpload = formData.get('reward_image_upload');
+            
+            try {
+                let response;
+                
+                // 检查是否有文件上传
+                if (rewardImageUpload && rewardImageUpload.size > 0) {
+                    // 如果有文件上传，使用FormData发送请求
+                    const uploadFormData = new FormData();
+                    uploadFormData.append('purpose', purpose);
+                    uploadFormData.append('reward_enabled', rewardEnabled);
+                    uploadFormData.append('reward_image_url', rewardImageUrl);
+                    uploadFormData.append('reward_description', rewardDescription);
+                    uploadFormData.append('reward_image_upload', rewardImageUpload);
+                    
+                    response = await fetch('/api/about/config', {
+                        method: 'POST',
+                        body: uploadFormData
+                    });
+                } else {
+                    // 如果没有文件上传，继续使用JSON格式发送请求
+                    response = await fetch('/api/about/config', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            purpose,
+                            reward_enabled: rewardEnabled,
+                            reward_image_url: rewardImageUrl,
+                            reward_description: rewardDescription
+                        })
+                    });
+                }
+                
+                const data = await response.json();
+                if (data.status === 'success') {
+                    // 显示成功提示
+                    successMessage.classList.remove('hidden');
+                    
+                    // 3秒后隐藏提示
+                    setTimeout(() => {
+                        successMessage.classList.add('hidden');
+                    }, 3000);
+                    
+                    // 刷新页面，显示最新配置
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    alert('保存失败：' + data.message);
+                }
+            } catch (error) {
+                console.error('保存配置失败:', error);
+                alert('保存失败，请稍后重试');
+            } finally {
+                // 隐藏加载状态
+                saveSpinner.classList.add('hidden');
+            }
+        });
+    </script>
+{% endblock %}
