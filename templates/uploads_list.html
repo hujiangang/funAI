@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uploads 文件列表</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .file-item {
+            transition: all 0.3s ease;
+        }
+        .file-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .file-icon {
+            font-size: 2rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-800 flex items-center">
+                <i class="fas fa-folder-open mr-3 text-blue-600"></i>
+                Uploads 文件列表
+            </h1>
+            <p class="text-gray-600 mt-2">显示所有上传的文件，点击文件名即可下载</p>
+        </header>
+
+        <main>
+            {% if files %}
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {% for file in files %}
+                        <div class="file-item bg-white rounded-lg shadow-md p-5">
+                            <div class="flex items-center mb-4">
+                                {% if file.extension in ['jpg', 'jpeg', 'png', 'gif', 'svg'] %}
+                                    <i class="fas fa-file-image file-icon text-purple-500 mr-4"></i>
+                                {% elif file.extension in ['pdf'] %}
+                                    <i class="fas fa-file-pdf file-icon text-red-500 mr-4"></i>
+                                {% elif file.extension in ['doc', 'docx'] %}
+                                    <i class="fas fa-file-word file-icon text-blue-500 mr-4"></i>
+                                {% elif file.extension in ['xls', 'xlsx'] %}
+                                    <i class="fas fa-file-excel file-icon text-green-500 mr-4"></i>
+                                {% elif file.extension in ['zip', 'rar', '7z'] %}
+                                    <i class="fas fa-file-archive file-icon text-yellow-500 mr-4"></i>
+                                {% else %}
+                                    <i class="fas fa-file-alt file-icon text-gray-500 mr-4"></i>
+                                {% endif %}
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-800">
+                                        <a href="{{ file.url }}" download="{{ file.name }}" class="hover:text-blue-600 transition-colors flex items-center">
+                                            {{ file.name }}
+                                            <i class="fas fa-download ml-2 text-sm"></i>
+                                        </a>
+                                    </h3>
+                                    <p class="text-sm text-gray-500 mt-1">{{ file.extension | upper }}</p>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center text-sm text-gray-600">
+                                <div class="flex items-center">
+                                    <i class="fas fa-hdd mr-1"></i>
+                                    <span>{{ file.size }}</span>
+                                </div>
+                                <div class="flex items-center">
+                                    <i class="fas fa-clock mr-1"></i>
+                                    <span>{{ file.modified }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="bg-white rounded-lg shadow-md p-8 text-center">
+                    <i class="fas fa-inbox text-gray-400 text-5xl mb-4"></i>
+                    <h2 class="text-xl font-semibold text-gray-800 mb-2">暂无文件</h2>
+                    <p class="text-gray-600">uploads目录中没有任何文件</p>
+                </div>
+            {% endif %}
+        </main>
+
+        <footer class="mt-12 text-center text-gray-500 text-sm">
+            <p>© {{ current_year }} AI游戏实验室</p>
+        </footer>
+    </div>
+</body>
+</html>
