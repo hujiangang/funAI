@@ -1,2 +1,8 @@
 /__pycache__
 /routers/__pycache__
+__pycache__/
+.runtime/
+.env
+.venv/
+*.log
+backups/

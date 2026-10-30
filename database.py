@@ -1,10 +1,10 @@
 import os
 from datetime import datetime
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Float
+from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Float, UniqueConstraint, inspect, text
 from sqlalchemy.orm import sessionmaker, Session, declarative_base
 
 # --- 1. 数据库配置 ---
-SQLALCHEMY_DATABASE_URL = "sqlite:///./games.db"
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./games.db")
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
@@ -40,6 +40,11 @@ class Game(Base):
     rating_total = Column(Integer, default=0)    # 总评分
     rating_count = Column(Integer, default=0)    # 评分次数
     views = Column(Integer, default=0)
+    likes = Column(Integer, default=0)
+    status = Column(String, default="published")
+    owner_token = Column(String, default="")
+    check_report = Column(Text, default="[]")
+    entry_path = Column(String, default="index.html")
     created_at = Column(DateTime, default=datetime.utcnow)
 
 # AI分类模型
@@ -79,8 +84,31 @@ class Like(Base):
     ip_address = Column(String, index=True)  # 用户IP地址，用于防刷
     created_at = Column(DateTime, default=datetime.utcnow)
 
-# 确保数据库表在模块导入时被创建
+class Reaction(Base):
+    __tablename__ = "reactions"
+    id = Column(Integer, primary_key=True)
+    game_id = Column(Integer, index=True, nullable=False)
+    visitor = Column(String, nullable=False)
+    liked = Column(Integer, default=0)
+    score = Column(Integer, default=0)
+    __table_args__ = (UniqueConstraint("game_id", "visitor"),)
+
+class SiteSetting(Base):
+    __tablename__ = "site_settings"
+    key = Column(String, primary_key=True)
+    value = Column(Text, default="")
+
+# 兼容旧数据库：仅新增列，保留原作品和计数。
 Base.metadata.create_all(bind=engine)
+with engine.begin() as connection:
+    existing_columns = {c["name"] for c in inspect(engine).get_columns("games")}
+    for name, definition in {
+        "likes": "INTEGER DEFAULT 0", "status": "VARCHAR DEFAULT 'published'",
+        "owner_token": "VARCHAR DEFAULT ''", "check_report": "TEXT DEFAULT '[]'",
+        "entry_path": "VARCHAR DEFAULT 'index.html'",
+    }.items():
+        if name not in existing_columns:
+            connection.execute(text(f"ALTER TABLE games ADD COLUMN {name} {definition}"))
 
 def get_db():
     db = SessionLocal()
